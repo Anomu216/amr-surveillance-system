@@ -367,6 +367,20 @@ public class DataRequestController(
             return Forbid();
         }
 
+        if (dataRequest.IsExpired)
+        {
+            await dataRequestService
+                .ExpireIfElapsedAsync(
+                    dataRequest.DataRequestID,
+                    cancellationToken);
+
+            TempData["ErrorMessage"] =
+                "This data request expired 72 hours after its first download. Please submit a new request to download the dataset.";
+
+            return RedirectToAction(
+                nameof(MyRequests));
+        }
+
         if (!string.Equals(
                 dataRequest.Status,
                 "Approved",

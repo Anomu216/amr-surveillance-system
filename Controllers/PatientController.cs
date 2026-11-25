@@ -156,28 +156,15 @@ public partial class PatientController(
 
             ValidatePatientIdAndFacility(model);
 
-            var retainedFields = new HashSet<string>
-            {
-                nameof(model.PatientID),
-                nameof(model.AcceptReject),
-                nameof(model.FacilityID),
-                nameof(model.EnrollmentDate),
-                nameof(model.ReceivingDate)
-            };
-
-            foreach (var key in ModelState.Keys.ToList())
-            {
-                if (!retainedFields.Contains(key))
-                {
-                    ModelState.Remove(key);
-                }
-            }
+            PruneRejectedSampleModelState(model);
         }
         else
         {
             ValidateDates(model);
 
             ValidatePatientIdAndFacility(model);
+
+            ValidateDemographicsAndVitals(model);
 
             ValidateAgeAndPresumptiveId(model);
 
@@ -269,9 +256,9 @@ public partial class PatientController(
     [HttpGet("Patient/Edit")]
     [HttpGet("Patient/Edit/{**patientId}")]
     public async Task<IActionResult> Edit(
-    string? patientId,
-    [FromQuery(Name = "patientId")] string? queryPatientId = null,
-    [FromQuery] string? id = null)
+        string? patientId,
+        [FromQuery(Name = "patientId")] string? queryPatientId = null,
+        [FromQuery] string? id = null)
     {
         var targetId = Uri.UnescapeDataString(
             patientId ?? queryPatientId ?? id ?? string.Empty).Trim();
@@ -324,33 +311,22 @@ public partial class PatientController(
 
         await PopulateLookups(model);
 
-        ValidateDates(model);
-
-        ValidatePatientIdAndFacility(model);
-
-        // Preserve rejected sample workflow during editing.
-
         if (IsRejectedSample(model))
         {
-            var retainedFields = new HashSet<string>
-            {
-                nameof(model.PatientID),
-                nameof(model.AcceptReject),
-                nameof(model.FacilityID),
-                nameof(model.EnrollmentDate),
-                nameof(model.ReceivingDate)
-            };
+            ValidateDates(model);
 
-            foreach (var key in ModelState.Keys.ToList())
-            {
-                if (!retainedFields.Contains(key))
-                {
-                    ModelState.Remove(key);
-                }
-            }
+            ValidatePatientIdAndFacility(model);
+
+            PruneRejectedSampleModelState(model);
         }
         else
         {
+            ValidateDates(model);
+
+            ValidatePatientIdAndFacility(model);
+
+            ValidateDemographicsAndVitals(model);
+
             ValidateAgeAndPresumptiveId(model);
 
             ValidateClinicalConditions(model);
@@ -519,12 +495,40 @@ public partial class PatientController(
     }
 
     // ============================================================
+    // REJECTED SAMPLE MODELSTATE PRUNING
+    // ============================================================
+
+    private void PruneRejectedSampleModelState(
+        PatientViewModel model)
+    {
+        var retainedFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            nameof(model.PatientID),
+            nameof(model.AcceptReject),
+            nameof(model.FacilityID),
+            nameof(model.EnrollmentDate),
+            nameof(model.ReceivingDate)
+        };
+
+        foreach (var key in ModelState.Keys.ToList())
+        {
+            var rootKey = key.Split('.', '[')[0];
+            if (!retainedFields.Contains(rootKey))
+            {
+                ModelState.Remove(key);
+            }
+        }
+    }
+
+    // ============================================================
     // DATE VALIDATION
     // ============================================================
 
     private void ValidateDates(
         PatientViewModel model)
     {
+        bool isRejected = IsRejectedSample(model);
+
         if (model.EnrollmentDate.HasValue &&
             model.EnrollmentDate.Value.Date > DateTime.Today)
         {
@@ -541,6 +545,21 @@ public partial class PatientController(
                 "Receiving date cannot be in the future.");
         }
 
+        if (model.EnrollmentDate.HasValue &&
+            model.ReceivingDate.HasValue &&
+            model.ReceivingDate.Value.Date <
+            model.EnrollmentDate.Value.Date)
+        {
+            ModelState.AddModelError(
+                nameof(model.ReceivingDate),
+                "Receiving date cannot be earlier than the enrollment date.");
+        }
+
+        if (isRejected)
+        {
+            return;
+        }
+
         if (model.PresentationDate.HasValue &&
             model.PresentationDate.Value.Date > DateTime.Today)
         {
@@ -555,16 +574,6 @@ public partial class PatientController(
             ModelState.AddModelError(
                 nameof(model.InfectionOnset),
                 "Infection onset date cannot be in the future.");
-        }
-
-        if (model.EnrollmentDate.HasValue &&
-            model.ReceivingDate.HasValue &&
-            model.ReceivingDate.Value.Date <
-            model.EnrollmentDate.Value.Date)
-        {
-            ModelState.AddModelError(
-                nameof(model.ReceivingDate),
-                "Receiving date cannot be earlier than the enrollment date.");
         }
     }
 
@@ -644,6 +653,116 @@ public partial class PatientController(
         var trimmed = value.Trim();
         return string.Equals(trimmed, NotApplicableValue, StringComparison.OrdinalIgnoreCase) ||
                string.Equals(trimmed, "Not Applicable", StringComparison.OrdinalIgnoreCase);
+    }
+
+    // ============================================================
+    // DEMOGRAPHICS, MILITARY/OCCUPATION & VITALS VALIDATION
+    // ============================================================
+
+    private void ValidateDemographicsAndVitals(
+        PatientViewModel model)
+    {
+        var isIsoPatient =
+            model.PatientID?.StartsWith(
+                "ISO",
+                StringComparison.OrdinalIgnoreCase) == true;
+
+        if (string.IsNullOrWhiteSpace(model.Sex))
+        {
+            ModelState.AddModelError(
+                nameof(model.Sex),
+                "Sex is required.");
+        }
+
+        if (!isIsoPatient)
+        {
+            if (string.IsNullOrWhiteSpace(model.ResidenceCounty))
+            {
+                ModelState.AddModelError(
+                    nameof(model.ResidenceCounty),
+                    "County of residence is required.");
+            }
+            else if (string.IsNullOrWhiteSpace(model.ResidenceSubCounty))
+            {
+                ModelState.AddModelError(
+                    nameof(model.ResidenceSubCounty),
+                    "Sub-county of residence is required.");
+            }
+
+            var milciv = model.MILCIV?.Trim();
+            var occupation = model.OccupationCategory?.Trim();
+
+            if (!string.IsNullOrWhiteSpace(milciv) &&
+                !string.IsNullOrWhiteSpace(occupation))
+            {
+                if (string.Equals(milciv, "Military", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(occupation, "Soldier", StringComparison.OrdinalIgnoreCase))
+                {
+                    ModelState.AddModelError(
+                        nameof(model.OccupationCategory),
+                        "Military participants must have \"Soldier\" selected as the occupation category.");
+                }
+                else if (string.Equals(occupation, "Soldier", StringComparison.OrdinalIgnoreCase) &&
+                         !string.Equals(milciv, "Military", StringComparison.OrdinalIgnoreCase))
+                {
+                    ModelState.AddModelError(
+                        nameof(model.MILCIV),
+                        "Participants with \"Soldier\" selected as their occupation must be classified as Military.");
+                }
+            }
+
+            if (string.Equals(model.Pregnant?.Trim(), "Yes", StringComparison.OrdinalIgnoreCase))
+            {
+                var isFemale = string.Equals(model.Sex?.Trim(), "Female", StringComparison.OrdinalIgnoreCase);
+                var ageYears = GetAgeInYears(model.Age, model.AgeUnit);
+
+                if (!isFemale)
+                {
+                    ModelState.AddModelError(
+                        nameof(model.Pregnant),
+                        "Pregnancy status cannot be Yes for non-female participants.");
+                }
+                else if (ageYears.HasValue && (ageYears.Value < 12.0 || ageYears.Value > 50.0))
+                {
+                    ModelState.AddModelError(
+                        nameof(model.Pregnant),
+                        "Pregnancy status is only applicable to female participants aged 12 to 50 years.");
+                }
+            }
+
+            if (model.BPSystolic.HasValue &&
+                model.BPDiastolic.HasValue &&
+                model.BPSystolic.Value <= model.BPDiastolic.Value)
+            {
+                ModelState.AddModelError(
+                    nameof(model.BPSystolic),
+                    "Systolic blood pressure must be greater than diastolic blood pressure.");
+            }
+        }
+
+        if (model.InfectionOnset.HasValue &&
+            model.PresentationDate.HasValue &&
+            !string.IsNullOrWhiteSpace(model.InfectionPresentAtAdmission))
+        {
+            var admissionStatus = model.InfectionPresentAtAdmission.Trim();
+            var onset = model.InfectionOnset.Value.Date;
+            var presentation = model.PresentationDate.Value.Date;
+
+            if (string.Equals(admissionStatus, "Yes", StringComparison.OrdinalIgnoreCase) &&
+                onset > presentation)
+            {
+                ModelState.AddModelError(
+                    nameof(model.InfectionOnset),
+                    "Infection onset must be on or before the Presentation Date when infection was present at admission.");
+            }
+            else if (string.Equals(admissionStatus, "No", StringComparison.OrdinalIgnoreCase) &&
+                     onset < presentation)
+            {
+                ModelState.AddModelError(
+                    nameof(model.InfectionOnset),
+                    "Infection onset must be on or after the Presentation Date when infection was not present at admission.");
+            }
+        }
     }
 
     // ============================================================

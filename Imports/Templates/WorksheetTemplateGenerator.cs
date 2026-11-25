@@ -19,6 +19,15 @@ public class WorksheetTemplateGenerator(
             await astConfigurationService
                 .GetActiveAntibioticsAsync();
 
+        var antibioticNameByCode = antibiotics
+            .GroupBy(a => a.AntibioticCode, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                g => g.Key,
+                g => !string.IsNullOrWhiteSpace(g.First().AntibioticName)
+                    ? g.First().AntibioticName.Trim()
+                    : g.Key,
+                StringComparer.OrdinalIgnoreCase);
+
         var activeCards = await context.ASTCards
             .AsNoTracking()
             .Where(c => c.IsActive)
@@ -67,19 +76,24 @@ public class WorksheetTemplateGenerator(
         ];
 
         // =================================================
-        // Dynamic Antibiotic Columns (Alphabetical Schema Order)
+        // Dynamic Antibiotic Columns (Human-Readable Names)
         // =================================================
 
         foreach (var antibiotic in antibiotics)
         {
+            var displayName =
+                !string.IsNullOrWhiteSpace(antibiotic.AntibioticName)
+                    ? antibiotic.AntibioticName.Trim()
+                    : antibiotic.AntibioticCode.Trim();
+
             if (antibiotic.MICEnabled)
             {
-                columns.Add($"{antibiotic.AntibioticCode}_MIC");
+                columns.Add($"{displayName}_MIC");
             }
 
             if (antibiotic.InterpretationEnabled)
             {
-                columns.Add($"{antibiotic.AntibioticCode}_INT");
+                columns.Add($"{displayName}_INT");
             }
         }
 
@@ -134,10 +148,12 @@ public class WorksheetTemplateGenerator(
             var rowIdx = 2;
             foreach (var card in activeCards)
             {
-                var orderedAbx = card.ASTCardAntibiotics
+                var orderedAbxNames = card.ASTCardAntibiotics
                     .OrderBy(a => a.DisplayOrder)
                     .ThenBy(a => a.AntibioticCode, StringComparer.OrdinalIgnoreCase)
-                    .Select(a => a.AntibioticCode)
+                    .Select(a => antibioticNameByCode.TryGetValue(a.AntibioticCode, out var name)
+                        ? name
+                        : a.AntibioticCode)
                     .Distinct(StringComparer.OrdinalIgnoreCase);
 
                 var mappedOrgs = card.ASTCardOrganisms
@@ -147,7 +163,7 @@ public class WorksheetTemplateGenerator(
 
                 cardRefSheet.Cell(rowIdx, 1).Value = card.ASTCard;
                 cardRefSheet.Cell(rowIdx, 2).Value = card.Description ?? string.Empty;
-                cardRefSheet.Cell(rowIdx, 3).Value = string.Join(", ", orderedAbx);
+                cardRefSheet.Cell(rowIdx, 3).Value = string.Join(", ", orderedAbxNames);
                 cardRefSheet.Cell(rowIdx, 4).Value = string.Join(", ", mappedOrgs);
                 rowIdx++;
             }
@@ -181,13 +197,13 @@ public class WorksheetTemplateGenerator(
         instructions.Cell(7, 2).Value = "Multiple AST cards should be separated using semicolons (e.g., GN83;XN05).";
 
         instructions.Cell(8, 1).Value = "6.";
-        instructions.Cell(8, 2).Value = "MIC and interpretation columns are generated from active antibiotics in alphabetical schema order.";
+        instructions.Cell(8, 2).Value = "MIC and interpretation columns are generated using full antibiotic names in alphabetical order.";
 
         instructions.Cell(9, 1).Value = "7.";
         instructions.Cell(9, 2).Value = "Do not manually add, remove, or rename antibiotic columns.";
 
         instructions.Cell(10, 1).Value = "8.";
-        instructions.Cell(10, 2).Value = "Use POS or NEG for applicable screening and AST finding fields.";
+        instructions.Cell(10, 2).Value = "Use Positive or Negative for applicable biochemical, screening, and AST finding fields (leave Catalase and Coagulase blank for Gram-negative isolates, and  Lactose and Oxidase for GP).";
 
         instructions.Columns().AdjustToContents();
 

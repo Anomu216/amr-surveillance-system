@@ -16,9 +16,9 @@ namespace AMRSurveillance.Imports.Services;
 
 public partial class WorksheetImportService(
     ApplicationDbContext context,
-    WorksheetImportMapper mapper,
     WorksheetImportValidator validator,
     WorksheetTemplateGenerator templateGenerator,
+    IASTConfigurationService astConfigurationService,
     IASTSchemaService astSchemaService,
     IWorksheetService worksheetService) : IWorksheetImportService
 {
@@ -95,6 +95,15 @@ public partial class WorksheetImportService(
             }
 
             // -------------------------------------------------
+            // Load active antibiotics to map readable Excel names -> SQL codes
+            // -------------------------------------------------
+
+            var activeAntibiotics =
+                await astConfigurationService.GetActiveAntibioticsAsync();
+
+            var rowMapper = new WorksheetImportMapper(activeAntibiotics);
+
+            // -------------------------------------------------
             // Build and validate the header map
             // -------------------------------------------------
 
@@ -102,7 +111,7 @@ public partial class WorksheetImportService(
 
             try
             {
-                columnMap = mapper.BuildColumnMap(excelWorksheet);
+                columnMap = rowMapper.BuildColumnMap(excelWorksheet);
             }
             catch (Exception)
             {
@@ -188,7 +197,7 @@ public partial class WorksheetImportService(
 
                 try
                 {
-                    mappedRow = mapper.Map(
+                    mappedRow = rowMapper.Map(
                         excelRow,
                         columnMap);
                 }
@@ -250,6 +259,10 @@ public partial class WorksheetImportService(
                     "No Growth",
                     StringComparison.OrdinalIgnoreCase);
 
+                var gramReaction = isNoGrowth ? null : Clean(mappedRow.GramReaction);
+                bool isGramPositive = string.Equals(gramReaction, "Positive", StringComparison.OrdinalIgnoreCase);
+                bool isGramNegative = string.Equals(gramReaction, "Negative", StringComparison.OrdinalIgnoreCase);
+
                 var whonetID = isNoGrowth ? null : Clean(mappedRow.WHONETID);
                 var cefoxitinScreen = isNoGrowth ? null : Clean(mappedRow.CefoxitinScreen);
                 var astResults = isNoGrowth
@@ -284,13 +297,17 @@ public partial class WorksheetImportService(
                     AcceptedID = isNoGrowth ? null : Clean(mappedRow.AcceptedID),
                     WHONETID = whonetID,
 
-                    GramReaction = isNoGrowth ? null : Clean(mappedRow.GramReaction),
+                    GramReaction = gramReaction,
                     Morphology = isNoGrowth ? null : Clean(mappedRow.Morphology),
                     Hemolysis = isNoGrowth ? null : Clean(mappedRow.Hemolysis),
-                    Catalase = isNoGrowth ? null : Clean(mappedRow.Catalase),
-                    Oxidase = isNoGrowth ? null : Clean(mappedRow.Oxidase),
-                    Coagulase = isNoGrowth ? null : Clean(mappedRow.Coagulase),
-                    LactoseFermentation = isNoGrowth ? null : Clean(mappedRow.LactoseFermentation),
+
+                    // GN -> Catalase & Coagulase are NULL
+                    Catalase = (isNoGrowth || isGramNegative) ? null : Clean(mappedRow.Catalase),
+                    Coagulase = (isNoGrowth || isGramNegative) ? null : Clean(mappedRow.Coagulase),
+
+                    // GP -> Oxidase & LactoseFermentation are NULL
+                    Oxidase = (isNoGrowth || isGramPositive) ? null : Clean(mappedRow.Oxidase),
+                    LactoseFermentation = (isNoGrowth || isGramPositive) ? null : Clean(mappedRow.LactoseFermentation),
 
                     Comments = Clean(mappedRow.Comments),
                     ASTCard = normalizedCards.Count > 0

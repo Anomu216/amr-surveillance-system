@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using AMRSurveillance.Security;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace AMRSurveillance.Models;
@@ -78,8 +79,27 @@ public class DataRequest
 
 
     // ============================================================
-    // EXPORT INFORMATION
+    // EXPORT & EXPIRATION INFORMATION
     // ============================================================
 
     public DateTime? ExportedAt { get; set; }
+
+    // Stamped once on the very first download; never overwritten on re-downloads.
+    public DateTime? FirstDownloadedAt { get; set; }
+
+    // Set to FirstDownloadedAt + 72 hours upon first download.
+    public DateTime? ExpiresAt { get; set; }
+
+    [NotMapped]
+    public bool IsExpired =>
+            string.Equals(Status, "Expired", StringComparison.OrdinalIgnoreCase) ||
+            (string.Equals(Status, "Approved", StringComparison.OrdinalIgnoreCase) &&
+             ExpiresAt.HasValue &&
+             EastAfricaTime.Now >= ExpiresAt.Value);
+
+    [NotMapped]
+    public bool IsHiddenFromUser =>
+        string.Equals(Status, "Rejected", StringComparison.OrdinalIgnoreCase) &&
+        ReviewedAt.HasValue &&
+        EastAfricaTime.Now >= ReviewedAt.Value.AddHours(72);
 }

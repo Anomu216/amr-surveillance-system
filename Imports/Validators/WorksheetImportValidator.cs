@@ -169,6 +169,47 @@ public class WorksheetImportValidator(ApplicationDbContext context)
         }
 
         // =================================================
+        // Biochemical & AST Screening Lookup Validation
+        // =================================================
+
+        ValidatePositiveNegative(row.GramReaction, "Gram Reaction", errors);
+        ValidatePositiveNegative(row.Catalase, "Catalase", errors);
+        ValidatePositiveNegative(row.Oxidase, "Oxidase", errors);
+        ValidatePositiveNegative(row.Coagulase, "Coagulase", errors);
+        ValidatePositiveNegative(row.LactoseFermentation, "Lactose Fermentation", errors);
+        ValidatePositiveNegative(row.ESBL, "ESBL", errors);
+        ValidatePositiveNegative(row.CefoxitinScreen, "Cefoxitin Screen", errors);
+        ValidatePositiveNegative(row.InducibleClindamycinResistance, "Inducible Clindamycin Resistance", errors);
+
+        // Match Worksheet.js rules for Gram-Negative and Gram-Positive isolates
+        var trimmedGram = row.GramReaction?.Trim();
+
+        if (string.Equals(trimmedGram, "Negative", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!string.IsNullOrWhiteSpace(row.Catalase))
+            {
+                errors.Add("Catalase must be blank when Gram Reaction is Negative (Gram-negative).");
+            }
+
+            if (!string.IsNullOrWhiteSpace(row.Coagulase))
+            {
+                errors.Add("Coagulase must be blank when Gram Reaction is Negative (Gram-negative).");
+            }
+        }
+        else if (string.Equals(trimmedGram, "Positive", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!string.IsNullOrWhiteSpace(row.Oxidase))
+            {
+                errors.Add("Oxidase must be blank when Gram Reaction is Positive (Gram-positive).");
+            }
+
+            if (!string.IsNullOrWhiteSpace(row.LactoseFermentation))
+            {
+                errors.Add("Lactose Fermentation must be blank when Gram Reaction is Positive (Gram-positive).");
+            }
+        }
+
+        // =================================================
         // Load Database AST Card Configuration
         // =================================================
 
@@ -231,14 +272,6 @@ public class WorksheetImportValidator(ApplicationDbContext context)
         }
 
         // =================================================
-        // POS / NEG Findings Validation
-        // =================================================
-
-        ValidatePosNeg(row.ESBL, "ESBL", errors);
-        ValidatePosNeg(row.CefoxitinScreen, "Cefoxitin Screen", errors);
-        ValidatePosNeg(row.InducibleClindamycinResistance, "Inducible Clindamycin Resistance", errors);
-
-        // =================================================
         // Dynamic AST Result Validation
         // =================================================
 
@@ -290,8 +323,8 @@ public class WorksheetImportValidator(ApplicationDbContext context)
         }
 
         var micLookup = new Dictionary<string, string?>(
-                    row.MICResults,
-                    StringComparer.OrdinalIgnoreCase);
+            row.MICResults,
+            StringComparer.OrdinalIgnoreCase);
 
         var intLookup = new Dictionary<string, string?>(
             row.InterpretationResults,
@@ -322,37 +355,42 @@ public class WorksheetImportValidator(ApplicationDbContext context)
                 continue;
             }
 
+            // Use human-readable name in messages so SQL codes remain internal
+            var displayName = !string.IsNullOrWhiteSpace(antibiotic.AntibioticName)
+                ? antibiotic.AntibioticName.Trim()
+                : code;
+
             if (hasMicEntry && !antibiotic.MICEnabled)
             {
-                errors.Add($"MIC is not enabled for antibiotic '{code}'.");
+                errors.Add($"MIC is not enabled for antibiotic '{displayName}'.");
             }
 
             if (hasIntEntry)
             {
                 if (!antibiotic.InterpretationEnabled)
                 {
-                    errors.Add($"Interpretation is not enabled for antibiotic '{code}'.");
+                    errors.Add($"Interpretation is not enabled for antibiotic '{displayName}'.");
                 }
 
                 var interpretation = rawInt!.Trim().ToUpperInvariant();
                 if (interpretation is not ("S" or "I" or "R"))
                 {
-                    errors.Add($"Invalid interpretation '{rawInt}' for antibiotic '{code}'. Use S, I or R.");
+                    errors.Add($"Invalid interpretation '{rawInt}' for antibiotic '{displayName}'. Use S, I or R.");
                 }
             }
 
             if (hasMicEntry && !hasIntEntry)
             {
-                errors.Add($"SIR interpretation is required for '{code}' when MIC ('{rawMic!.Trim()}') is provided.");
+                errors.Add($"SIR interpretation is required for '{displayName}' when MIC ('{rawMic!.Trim()}') is provided.");
             }
             else if (hasIntEntry && antibiotic.MICEnabled && !hasMicEntry)
             {
-                errors.Add($"MIC value is required for '{code}' when SIR interpretation ('{rawInt!.Trim()}') is provided.");
+                errors.Add($"MIC value is required for '{displayName}' when SIR interpretation ('{rawInt!.Trim()}') is provided.");
             }
 
             if (selectedCards.Count == 0)
             {
-                errors.Add($"Cannot import AST results for '{code}' because no AST Card is specified.");
+                errors.Add($"Cannot import AST results for '{displayName}' because no AST Card is specified.");
                 continue;
             }
 
@@ -366,13 +404,13 @@ public class WorksheetImportValidator(ApplicationDbContext context)
 
             if (!matchesDbCard && !matchesLegacyCard)
             {
-                errors.Add($"Antibiotic '{code}' does not belong to the selected AST Card(s) ({string.Join("; ", selectedCards)}).");
+                errors.Add($"Antibiotic '{displayName}' does not belong to the selected AST Card(s) ({string.Join("; ", selectedCards)}).");
             }
         }
     }
 
     // =====================================================
-    // POS / NEG & Helpers
+    // Positive / Negative & Helpers
     // =====================================================
 
     private static bool IsNoGrowth(string? cultureResult)
@@ -383,7 +421,7 @@ public class WorksheetImportValidator(ApplicationDbContext context)
                string.Equals(val, "NG48", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static void ValidatePosNeg(
+    private static void ValidatePositiveNegative(
         string? value,
         string fieldName,
         List<string> errors)
@@ -391,11 +429,12 @@ public class WorksheetImportValidator(ApplicationDbContext context)
         if (string.IsNullOrWhiteSpace(value))
             return;
 
-        var normalized = value.Trim().ToUpperInvariant();
+        var trimmed = value.Trim();
 
-        if (normalized is not ("POS" or "NEG"))
+        if (!string.Equals(trimmed, "Positive", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(trimmed, "Negative", StringComparison.OrdinalIgnoreCase))
         {
-            errors.Add($"{fieldName} must be POS or NEG.");
+            errors.Add($"Invalid {fieldName} '{trimmed}'. Must be Positive or Negative (leave blank if not applicable).");
         }
     }
 }

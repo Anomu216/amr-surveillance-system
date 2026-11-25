@@ -7,6 +7,7 @@
             StringSplitOptions.RemoveEmptyEntries |
             StringSplitOptions.TrimEntries
         )
+        .Where(s => !string.Equals(s, "N/A", StringComparison.OrdinalIgnoreCase))
         .ToHashSet(StringComparer.OrdinalIgnoreCase);
 }
 
@@ -78,7 +79,8 @@
 
                     @foreach (var symptom in Model.SkinInfectionSymptomsList)
                     {
-                        if (string.IsNullOrWhiteSpace(symptom.Value))
+                        if (string.IsNullOrWhiteSpace(symptom.Value) ||
+                        string.Equals(symptom.Value.Trim(), "N/A", StringComparison.OrdinalIgnoreCase))
                         {
                             continue;
                         }
@@ -288,3 +290,23 @@
     </div>
 
 </div>
+
+<script>
+    (function () {
+        const section = document.getElementById("skinInfectionSymptomsSection");
+        const container = document.getElementById("skinInfectionSymptomsContainer");
+
+        if (!section || !container) return;
+
+        function syncSkinSectionVisibility() {
+            const isHidden = container.classList.contains("d-none") ||
+                container.style.display === "none";
+            section.classList.toggle("d-none", isHidden);
+        }
+
+        const observer = new MutationObserver(syncSkinSectionVisibility);
+        observer.observe(container, { attributes: true, attributeFilter: ["class", "style"] });
+
+        syncSkinSectionVisibility();
+    })();
+</script>

@@ -60,9 +60,10 @@ public class WorksheetController(
                      w.WHONETID.Contains(
                          search,
                          StringComparison.OrdinalIgnoreCase)) ||
-                    w.CultureResult.Contains(
-                        search,
-                        StringComparison.OrdinalIgnoreCase))
+                    (w.ASTCard != null &&
+                     w.ASTCard.Contains(
+                         search,
+                         StringComparison.OrdinalIgnoreCase)))
                 .ToList();
         }
 

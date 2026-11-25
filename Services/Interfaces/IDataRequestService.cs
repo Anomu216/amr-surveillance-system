@@ -22,8 +22,8 @@ public interface IDataRequestService
             CancellationToken cancellationToken = default);
 
     Task<List<DataRequest>> GetUserRequestsAsync(
-    string userId,
-    CancellationToken cancellationToken = default);
+        string userId,
+        CancellationToken cancellationToken = default);
 
     // ============================================================
     // APPROVAL QUEUE
@@ -49,7 +49,7 @@ public interface IDataRequestService
         CancellationToken cancellationToken = default);
 
     // ============================================================
-    // EXPORT
+    // EXPORT & EXPIRATION
     // ============================================================
 
     Task<byte[]> GenerateExcelExportAsync(
@@ -57,6 +57,10 @@ public interface IDataRequestService
         CancellationToken cancellationToken = default);
 
     Task MarkRequestAsExportedAsync(
+        int dataRequestId,
+        CancellationToken cancellationToken = default);
+
+    Task ExpireIfElapsedAsync(
         int dataRequestId,
         CancellationToken cancellationToken = default);
 }

@@ -1,289 +1,376 @@
 ﻿@model AMRSurveillance.ViewModels.PatientViewModel
 
-@{
-    var selectedSkinSymptoms = (Model.SkinInfectionSymptoms ?? string.Empty)
-        .Split(
-            ';',
-            StringSplitOptions.RemoveEmptyEntries |
-            StringSplitOptions.TrimEntries
-        )
-        .Where(s => !string.Equals(s, "N/A", StringComparison.OrdinalIgnoreCase))
-        .ToHashSet(StringComparer.OrdinalIgnoreCase);
-}
-
 <div class="card section-card">
 
-    <div class="card-header">
+    <!-- ========================================= -->
+    <!-- SECTION HEADER                            -->
+    <!-- ========================================= -->
 
-        <h5 class="mb-0">
+    <div class="card-header d-flex align-items-center">
 
-            <i class="bi bi-clipboard-pulse me-2"></i>
-            Clinical Presentation
+        <i class="bi bi-people-fill text-primary me-2 fs-4"></i>
 
-        </h5>
+        <div>
 
-        <small class="text-muted">
-            Record the patient's presenting clinical condition.
-        </small>
+            <h5 class="mb-0">
+                Demographics &amp; Residence
+            </h5>
+
+            <small class="text-muted">
+                Record participant demographic characteristics, occupation, and residential details.
+            </small>
+
+        </div>
 
     </div>
 
 
+    <!-- ========================================= -->
+    <!-- SECTION BODY                              -->
+    <!-- ========================================= -->
+
     <div class="card-body">
 
-        <!-- ========================================= -->
-        <!-- Clinical Presentation -->
-        <!-- ========================================= -->
+        <!-- ===================================== -->
+        <!-- Core Demographics (All Case Types)    -->
+        <!-- ===================================== -->
 
-        <div class="mb-4">
+        <h6 class="text-primary border-bottom pb-2 mb-4">
+            Core Demographics
+        </h6>
 
-            <label asp-for="ClinicalPresentation"
-                   class="form-label fw-semibold">
+        <div class="row g-4">
 
-                Clinical Presentation
-                <span class="text-danger">*</span>
+            <!-- Sex -->
 
-            </label>
+            <div class="col-md-6">
 
-            <select asp-for="ClinicalPresentation"
-                    asp-items="Model.ClinicalPresentationList"
-                    class="form-select"
-                    id="ClinicalPresentation">
-            </select>
+                <label asp-for="Sex"
+                       class="form-label fw-semibold">
 
-            <div class="invalid-feedback"></div>
+                    Sex
+                    <span class="text-danger">*</span>
 
-            <span asp-validation-for="ClinicalPresentation"
-                  class="text-danger small">
-            </span>
+                </label>
+
+                <select asp-for="Sex"
+                        asp-items="Model.SexList"
+                        class="form-select"
+                        id="Sex">
+                </select>
+
+                <div class="invalid-feedback"></div>
+
+                <span asp-validation-for="Sex"
+                      class="text-danger small"></span>
+
+            </div>
+
+
+            <!-- Date of Birth -->
+
+            <div class="col-md-6">
+
+                <label asp-for="DateOfBirth"
+                       class="form-label fw-semibold">
+
+                    Date of Birth
+
+                </label>
+
+                <input asp-for="DateOfBirth"
+                       type="date"
+                       class="form-control"
+                       id="DateOfBirth"
+                       max="@DateTime.Today.ToString("yyyy-MM-dd")"
+                       autocomplete="off" />
+
+                <div class="invalid-feedback"></div>
+
+                <div class="form-text">
+                    Optional if unknown; when entered, age must match enrollment date.
+                </div>
+
+                <span asp-validation-for="DateOfBirth"
+                      class="text-danger small"></span>
+
+            </div>
+
+
+            <!-- Age -->
+
+            <div class="col-md-6">
+
+                <label asp-for="Age"
+                       class="form-label fw-semibold">
+
+                    Age
+                    <span class="text-danger">*</span>
+
+                </label>
+
+                <input asp-for="Age"
+                       type="number"
+                       min="0"
+                       step="1"
+                       class="form-control"
+                       id="Age"
+                       placeholder="Enter whole-number age"
+                       autocomplete="off" />
+
+                <div class="invalid-feedback"
+                     id="ageValidationFeedback"></div>
+
+                <span asp-validation-for="Age"
+                      class="text-danger small"></span>
+
+            </div>
+
+
+            <!-- Age Unit -->
+
+            <div class="col-md-6">
+
+                <label asp-for="AgeUnit"
+                       class="form-label fw-semibold">
+
+                    Age Unit
+                    <span class="text-danger">*</span>
+
+                </label>
+
+                <select asp-for="AgeUnit"
+                        asp-items="Model.AgeUnitList"
+                        class="form-select"
+                        id="AgeUnit">
+                </select>
+
+                <div class="invalid-feedback"></div>
+
+                <span asp-validation-for="AgeUnit"
+                      class="text-danger small"></span>
+
+            </div>
 
         </div>
 
 
-        <!-- ========================================= -->
-        <!-- Skin Infection Symptoms -->
-        <!-- Displayed only when applicable -->
-        <!-- ========================================= -->
+        <!-- ===================================== -->
+        <!-- ISO Notice for Community Fields       -->
+        <!-- ===================================== -->
 
-        <div class="mb-4"
-             id="skinInfectionSymptomsSection">
+        <div id="communityIsoNotice"
+             class="alert alert-secondary mt-4 mb-0 d-none"
+             role="status">
+            <i class="bi bi-info-circle me-2"></i>
+            Socioeconomic and residential details are <strong>Not Applicable (N/A)</strong> for ISO cases.
+        </div>
 
-            <label class="form-label fw-semibold">
-                Skin Infection Symptoms
-            </label>
 
-            <div class="border rounded p-3 bg-light"
-                 id="skinInfectionSymptomsContainer">
+        <!-- ===================================== -->
+        <!-- Community & Residential Details       -->
+        <!-- Hidden automatically for ISO cases    -->
+        <!-- ===================================== -->
 
-                <div class="row">
+        <div id="communityFields">
 
-                    @foreach (var symptom in Model.SkinInfectionSymptomsList)
-                    {
-                        if (string.IsNullOrWhiteSpace(symptom.Value) ||
-                        string.Equals(symptom.Value.Trim(), "N/A", StringComparison.OrdinalIgnoreCase))
-                        {
-                            continue;
-                        }
+            <h6 class="text-primary border-bottom pb-2 mt-5 mb-4">
+                Occupation &amp; Household
+            </h6>
 
-                        <div class="col-md-6 col-lg-4 mb-2">
+            <div class="row g-4">
 
-                            <div class="form-check">
+                <!-- Military / Civilian Status -->
 
-                                <input class="form-check-input skin-symptom"
-                                       type="checkbox"
-                                       name="SkinInfectionSymptomsSelected"
-                                       value="@symptom.Value"
-                                       id="symptom_@symptom.Value.GetHashCode()"
-                                       checked="@selectedSkinSymptoms.Contains(symptom.Value.Trim())" />
+                <div class="col-md-4">
 
-                                <label class="form-check-label"
-                                       for="symptom_@symptom.Value.GetHashCode()">
+                    <label asp-for="MILCIV"
+                           class="form-label fw-semibold">
 
-                                    @symptom.Text
+                        Military / Civilian Status
 
-                                </label>
+                    </label>
 
-                            </div>
+                    <select asp-for="MILCIV"
+                            asp-items="Model.MilitaryCivilianList"
+                            class="form-select"
+                            id="MILCIV">
+                    </select>
 
-                        </div>
-                    }
+                    <div class="invalid-feedback"></div>
+
+                    <span asp-validation-for="MILCIV"
+                          class="text-danger small"></span>
+
+                </div>
+
+
+                <!-- Occupation Category -->
+
+                <div class="col-md-4">
+
+                    <label asp-for="OccupationCategory"
+                           class="form-label fw-semibold">
+
+                        Occupation Category
+
+                    </label>
+
+                    <select asp-for="OccupationCategory"
+                            asp-items="Model.OccupationCategoryList"
+                            class="form-select"
+                            id="OccupationCategory">
+                    </select>
+
+                    <div class="invalid-feedback"></div>
+
+                    <span asp-validation-for="OccupationCategory"
+                          class="text-danger small"></span>
+
+                </div>
+
+
+                <!-- Household Size -->
+
+                <div class="col-md-4">
+
+                    <label asp-for="HouseholdSize"
+                           class="form-label fw-semibold">
+
+                        Household Size
+
+                    </label>
+
+                    <input asp-for="HouseholdSize"
+                           type="number"
+                           min="1"
+                           max="100"
+                           step="1"
+                           class="form-control"
+                           id="HouseholdSize"
+                           placeholder="Number of household members"
+                           autocomplete="off" />
+
+                    <div class="invalid-feedback"></div>
+
+                    <span asp-validation-for="HouseholdSize"
+                          class="text-danger small"></span>
 
                 </div>
 
             </div>
 
-            <input type="hidden"
-                   asp-for="SkinInfectionSymptoms"
-                   id="SkinInfectionSymptoms" />
 
-            <span asp-validation-for="SkinInfectionSymptoms"
-                  class="text-danger small">
-            </span>
+            <h6 class="text-primary border-bottom pb-2 mt-5 mb-4">
+                Residence Information
+            </h6>
 
-        </div>
+            <div class="row g-4">
 
+                <!-- Residence County -->
 
-        <!-- ========================================= -->
-        <!-- Patient Type -->
-        <!-- ========================================= -->
+                <div class="col-md-6">
 
-        <div class="mb-4">
+                    <label asp-for="ResidenceCounty"
+                           class="form-label fw-semibold">
 
-            <label asp-for="PatientType"
-                   class="form-label fw-semibold">
+                        County of Residence
+                        <span class="text-danger">*</span>
 
-                Patient Type
-                <span class="text-danger">*</span>
+                    </label>
 
-            </label>
+                    <select asp-for="ResidenceCounty"
+                            asp-items="Model.CountyList"
+                            class="form-select"
+                            id="ResidenceCounty"
+                            data-subcounty-url="@Url.Action("GetSubCounties", "Patient")">
+                    </select>
 
-            <select asp-for="PatientType"
-                    asp-items="Model.PatientTypeList"
-                    class="form-select"
-                    id="PatientType">
-            </select>
+                    <div class="invalid-feedback"></div>
 
-            <div class="invalid-feedback"></div>
+                    <span asp-validation-for="ResidenceCounty"
+                          class="text-danger small"></span>
 
-            <span asp-validation-for="PatientType"
-                  class="text-danger small">
-            </span>
-
-        </div>
+                </div>
 
 
-        <!-- ========================================= -->
-        <!-- Presentation Date -->
-        <!-- ========================================= -->
+                <!-- Residence Sub-County (Cascaded from County) -->
 
-        <div class="mb-4">
+                <div class="col-md-6">
 
-            <label asp-for="PresentationDate"
-                   class="form-label fw-semibold">
+                    <label asp-for="ResidenceSubCounty"
+                           class="form-label fw-semibold">
 
-                Date of Presentation
-                <span class="text-danger">*</span>
+                        Sub-County of Residence
+                        <span class="text-danger">*</span>
 
-            </label>
+                    </label>
 
-            <input asp-for="PresentationDate"
-                   class="form-control"
-                   type="date"
-                   id="PresentationDate"
-                   max="@DateTime.Today.ToString("yyyy-MM-dd")"
-                   autocomplete="off" />
+                    <select asp-for="ResidenceSubCounty"
+                            asp-items="Model.SubCountyList"
+                            class="form-select"
+                            id="ResidenceSubCounty">
+                    </select>
 
-            <div class="invalid-feedback"></div>
+                    <div class="invalid-feedback"></div>
 
-            <span asp-validation-for="PresentationDate"
-                  class="text-danger small">
-            </span>
+                    <span asp-validation-for="ResidenceSubCounty"
+                          class="text-danger small"></span>
 
-        </div>
+                </div>
 
 
-        <!-- ========================================= -->
-        <!-- Hospital Location -->
-        <!-- ========================================= -->
+                <!-- Residence Village / Estate -->
 
-        <div class="mb-4">
+                <div class="col-md-6">
 
-            <label asp-for="HospitalLocation"
-                   class="form-label fw-semibold">
+                    <label asp-for="ResidenceVillage"
+                           class="form-label fw-semibold">
 
-                Hospital Location
+                        Village / Estate
 
-            </label>
+                    </label>
 
-            <select asp-for="HospitalLocation"
-                    asp-items="Model.HospitalLocationList"
-                    class="form-select"
-                    id="HospitalLocation">
-            </select>
+                    <input asp-for="ResidenceVillage"
+                           type="text"
+                           class="form-control"
+                           id="ResidenceVillage"
+                           placeholder="Enter village or estate name"
+                           autocomplete="off" />
 
-            <div class="invalid-feedback"></div>
+                    <div class="invalid-feedback"></div>
 
-            <span asp-validation-for="HospitalLocation"
-                  class="text-danger small">
-            </span>
+                    <span asp-validation-for="ResidenceVillage"
+                          class="text-danger small"></span>
 
-        </div>
+                </div>
 
 
-        <!-- ========================================= -->
-        <!-- Inpatient-only Fields -->
-        <!-- ========================================= -->
+                <!-- Residence Description (Urban / Peri-Urban / Rural) -->
 
-        <div class="mb-4"
-             id="hospitalWardContainer">
+                <div class="col-md-6">
 
-            <label asp-for="HospitalWard"
-                   class="form-label fw-semibold">
+                    <label asp-for="ResidenceDescription"
+                           class="form-label fw-semibold">
 
-                Hospital Ward
+                        Residence Setting / Description
 
-            </label>
+                    </label>
 
-            <input asp-for="HospitalWard"
-                   class="form-control"
-                   id="HospitalWard"
-                   autocomplete="off" />
+                    <select asp-for="ResidenceDescription"
+                            asp-items="Model.ResidenceDescriptionList"
+                            class="form-select"
+                            id="ResidenceDescription">
+                    </select>
 
-            <div class="invalid-feedback"></div>
+                    <div class="invalid-feedback"></div>
 
-            <span asp-validation-for="HospitalWard"
-                  class="text-danger small">
-            </span>
+                    <span asp-validation-for="ResidenceDescription"
+                          class="text-danger small"></span>
 
-        </div>
+                </div>
 
-
-        <div class="mb-4"
-             id="icuContainer">
-
-            <label asp-for="ICUAdmission"
-                   class="form-label fw-semibold">
-
-                ICU Admission
-
-            </label>
-
-            <select asp-for="ICUAdmission"
-                    asp-items="Model.YesNoList"
-                    class="form-select"
-                    id="ICUAdmission">
-            </select>
-
-            <div class="invalid-feedback"></div>
-
-            <span asp-validation-for="ICUAdmission"
-                  class="text-danger small">
-            </span>
-
-        </div>
-
-
-        <div class="mb-3"
-             id="wardAdmissionContainer">
-
-            <label asp-for="WardAdmission"
-                   class="form-label fw-semibold">
-
-                Ward Admission
-
-            </label>
-
-            <select asp-for="WardAdmission"
-                    asp-items="Model.YesNoList"
-                    class="form-select"
-                    id="WardAdmission">
-            </select>
-
-            <div class="invalid-feedback"></div>
-
-            <span asp-validation-for="WardAdmission"
-                  class="text-danger small">
-            </span>
+            </div>
 
         </div>
 
@@ -293,20 +380,20 @@
 
 <script>
     (function () {
-        const section = document.getElementById("skinInfectionSymptomsSection");
-        const container = document.getElementById("skinInfectionSymptomsContainer");
+        const communityFields = document.getElementById("communityFields");
+        const isoNotice = document.getElementById("communityIsoNotice");
 
-        if (!section || !container) return;
+        if (!communityFields || !isoNotice) return;
 
-        function syncSkinSectionVisibility() {
-            const isHidden = container.classList.contains("d-none") ||
-                container.style.display === "none";
-            section.classList.toggle("d-none", isHidden);
+        function syncCommunityIsoDisplayState() {
+            const isHidden = communityFields.classList.contains("d-none") ||
+                communityFields.style.display === "none";
+            isoNotice.classList.toggle("d-none", !isHidden);
         }
 
-        const observer = new MutationObserver(syncSkinSectionVisibility);
-        observer.observe(container, { attributes: true, attributeFilter: ["class", "style"] });
+        const observer = new MutationObserver(syncCommunityIsoDisplayState);
+        observer.observe(communityFields, { attributes: true, attributeFilter: ["class", "style"] });
 
-        syncSkinSectionVisibility();
+        syncCommunityIsoDisplayState();
     })();
 </script>

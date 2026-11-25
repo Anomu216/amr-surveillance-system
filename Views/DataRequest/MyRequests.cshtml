@@ -115,23 +115,26 @@
 
                             @foreach (var request in Model)
                             {
-                                var status =
-                                string.IsNullOrWhiteSpace(request.Status)
+                                var effectiveStatus = request.IsExpired
+                                ? "Expired"
+                                : string.IsNullOrWhiteSpace(request.Status)
                                 ? "Pending"
                                 : request.Status.Trim();
 
                                 var statusClass =
-                                status.Equals(
-                                "Approved",
-                                StringComparison.OrdinalIgnoreCase)
+                                effectiveStatus.Equals("Approved", StringComparison.OrdinalIgnoreCase)
                                 ? "bg-success"
-                                : status.Equals(
-                                "Rejected",
-                                StringComparison.OrdinalIgnoreCase)
+                                : effectiveStatus.Equals("Expired", StringComparison.OrdinalIgnoreCase)
+                                ? "bg-secondary"
+                                : effectiveStatus.Equals("Rejected", StringComparison.OrdinalIgnoreCase)
                                 ? "bg-danger"
                                 : "bg-warning text-dark";
 
-                                <tr>
+                                var expiresAtIso = request.ExpiresAt.HasValue
+                                ? $"{request.ExpiresAt.Value:yyyy-MM-ddTHH:mm:ss}+03:00"
+                                : string.Empty;
+
+                                <tr data-request-row="@request.DataRequestID">
 
                                     <!-- REQUEST ID -->
                                     <td>
@@ -168,8 +171,8 @@
                                     <!-- STATUS -->
                                     <td>
 
-                                        <span class="badge @statusClass">
-                                            @status
+                                        <span class="badge @statusClass js-status-badge">
+                                            @effectiveStatus
                                         </span>
 
                                     </td>
@@ -210,26 +213,45 @@
 
 
                                     <!-- EXPORT -->
-                                    <td class="text-center">
+                                    <td class="text-center js-export-cell">
 
-                                        @if (status.Equals(
-                                                                        "Approved",
-                                                                        StringComparison.OrdinalIgnoreCase))
+                                        @if (effectiveStatus.Equals("Approved", StringComparison.OrdinalIgnoreCase))
                                         {
-                                            <a asp-controller="DataRequest"
-                                               asp-action="Download"
-                                               asp-route-id="@request.DataRequestID"
-                                               class="btn btn-sm btn-success"
-                                               title="Download approved data export">
+                                            <div class="d-inline-flex flex-column align-items-center gap-1">
+                                                <a asp-controller="DataRequest"
+                                                   asp-action="Download"
+                                                   asp-route-id="@request.DataRequestID"
+                                                   class="btn btn-sm btn-success js-download-btn"
+                                                   data-request-id="@request.DataRequestID"
+                                                   data-expires-at="@expiresAtIso"
+                                                   title="Download approved data export">
 
-                                                <i class="bi bi-download me-1"></i>
-                                                Download
+                                                    <i class="bi bi-download me-1"></i>
+                                                    Download
 
-                                            </a>
+                                                </a>
+
+                                                <small class="text-muted js-countdown-text @(request.ExpiresAt.HasValue ? "" : "d-none")"
+                                                       data-expires-at="@expiresAtIso">
+                                                </small>
+                                            </div>
                                         }
-                                        else if (status.Equals(
-                                        "Rejected",
-                                        StringComparison.OrdinalIgnoreCase))
+                                        else if (effectiveStatus.Equals("Expired", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            <div class="d-inline-flex flex-column align-items-center gap-1">
+                                                <span class="text-muted small">
+                                                    <i class="bi bi-clock-history me-1"></i>
+                                                    Download window elapsed
+                                                </span>
+                                                <a asp-controller="DataRequest"
+                                                   asp-action="Index"
+                                                   class="btn btn-sm btn-outline-primary">
+                                                    <i class="bi bi-arrow-repeat me-1"></i>
+                                                    Request Afresh
+                                                </a>
+                                            </div>
+                                        }
+                                        else if (effectiveStatus.Equals("Rejected", StringComparison.OrdinalIgnoreCase))
                                         {
                                             <span class="text-danger small">
                                                 <i class="bi bi-x-circle me-1"></i>
@@ -292,3 +314,98 @@
     </div>
 
 </div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const SEVENTY_TWO_HOURS_MS = 72 * 60 * 60 * 1000;
+            const requestIndexUrl = '@Url.Action("Index", "DataRequest")';
+
+            function formatRemaining(ms) {
+                const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+                const hours = Math.floor(totalSeconds / 3600);
+                const minutes = Math.floor((totalSeconds % 3600) / 60);
+                const seconds = totalSeconds % 60;
+
+                return `${hours}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
+            }
+
+            function markRowExpired(row) {
+                if (!row) return;
+
+                const badge = row.querySelector('.js-status-badge');
+                if (badge) {
+                    badge.textContent = 'Expired';
+                    badge.classList.remove('bg-success', 'bg-warning', 'text-dark', 'bg-danger');
+                    badge.classList.add('bg-secondary');
+                }
+
+                const exportCell = row.querySelector('.js-export-cell');
+                if (exportCell) {
+                    exportCell.innerHTML = `
+                        <div class="d-inline-flex flex-column align-items-center gap-1">
+                            <span class="text-muted small">
+                                <i class="bi bi-clock-history me-1"></i>
+                                Download window elapsed
+                            </span>
+                            <a href="${requestIndexUrl}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-arrow-repeat me-1"></i>
+                                Request Afresh
+                            </a>
+                        </div>`;
+                }
+            }
+
+            function startCountdown(countdownEl, expiresAtMs, prefixText) {
+                if (countdownEl.dataset.timerRunning === 'true') return;
+                countdownEl.dataset.timerRunning = 'true';
+                countdownEl.classList.remove('d-none');
+
+                const row = countdownEl.closest('tr');
+
+                function tick() {
+                    const remaining = expiresAtMs - Date.now();
+                    if (remaining <= 0) {
+                        clearInterval(intervalId);
+                        markRowExpired(row);
+                        return;
+                    }
+
+                    countdownEl.innerHTML = `<i class="bi bi-hourglass-split me-1"></i>${prefixText} <strong>${formatRemaining(remaining)}</strong>`;
+                }
+
+                tick();
+                const intervalId = setInterval(tick, 1000);
+            }
+
+            // Resume active countdowns on page load for already-downloaded requests
+            document.querySelectorAll('.js-countdown-text').forEach(el => {
+                const iso = el.dataset.expiresAt;
+                if (!iso) return;
+
+                const expiresAtMs = Date.parse(iso);
+                if (!Number.isNaN(expiresAtMs)) {
+                    startCountdown(el, expiresAtMs, 'Expires in');
+                }
+            });
+
+            // Immediately display notice & start 72-hour countdown on first download click
+            document.querySelectorAll('.js-download-btn').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const container = btn.parentElement;
+                    const countdownEl = container?.querySelector('.js-countdown-text');
+                    if (!countdownEl) return;
+
+                    // Anchor strictly to the first download; re-clicks do not reset the timer
+                    if (!btn.dataset.expiresAt) {
+                        const expiresAtMs = Date.now() + SEVENTY_TWO_HOURS_MS;
+                        const iso = new Date(expiresAtMs).toISOString();
+                        btn.dataset.expiresAt = iso;
+                        countdownEl.dataset.expiresAt = iso;
+                        startCountdown(countdownEl, expiresAtMs, 'Download expires in');
+                    }
+                });
+            });
+        })();
+    </script>
+}

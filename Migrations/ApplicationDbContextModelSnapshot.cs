@@ -293,11 +293,17 @@ namespace AMRSurveillance.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DataRequestID"));
 
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("ExportedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Filters")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("FirstDownloadedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("IdentifierType")
                         .HasMaxLength(50)

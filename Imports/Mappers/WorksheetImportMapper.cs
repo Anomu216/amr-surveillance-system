@@ -1,5 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 using ClosedXML.Excel;
+using AMRSurveillance.Models;
 using AMRSurveillance.ViewModels;
 
 namespace AMRSurveillance.Imports.Mappers;
@@ -7,12 +8,50 @@ namespace AMRSurveillance.Imports.Mappers;
 public class WorksheetImportMapper
 {
     private static readonly Regex MicColumnRegex = new(
-        @"^([A-Za-z0-9_]+)_MIC$",
+        @"^(.+)_MIC$",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private static readonly Regex InterpretationColumnRegex = new(
-        @"^([A-Za-z0-9_]+)_INT$",
+        @"^(.+)_INT$",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    private readonly Dictionary<string, string> _nameToCodeMap;
+
+    public WorksheetImportMapper()
+    {
+        _nameToCodeMap = new Dictionary<string, string>(
+            StringComparer.OrdinalIgnoreCase);
+    }
+
+    public WorksheetImportMapper(IEnumerable<Antibiotic> antibiotics)
+    {
+        _nameToCodeMap = new Dictionary<string, string>(
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var abx in antibiotics)
+        {
+            if (string.IsNullOrWhiteSpace(abx.AntibioticCode))
+                continue;
+
+            var code = abx.AntibioticCode.Trim().ToUpperInvariant();
+
+            // Register SQL code itself (backward compatibility)
+            _nameToCodeMap.TryAdd(code, code);
+
+            // Register human-readable antibiotic name (e.g., "Cefazolin" -> "CZO")
+            if (!string.IsNullOrWhiteSpace(abx.AntibioticName))
+            {
+                var name = abx.AntibioticName.Trim();
+                _nameToCodeMap.TryAdd(name, code);
+
+                var normalizedName = NormalizeKey(name);
+                if (!string.IsNullOrWhiteSpace(normalizedName))
+                {
+                    _nameToCodeMap.TryAdd(normalizedName, code);
+                }
+            }
+        }
+    }
 
     // =====================================================
     // Map Excel Row
@@ -22,6 +61,27 @@ public class WorksheetImportMapper
         IXLRow row,
         IReadOnlyDictionary<string, int> columnMap)
     {
+        var rawGramReaction =
+            GetNullableValue(
+                row,
+                columnMap,
+                "GramReaction");
+
+        var normalizedGramReaction =
+            NormalizePositiveNegative(rawGramReaction);
+
+        var isGramPositive =
+            string.Equals(
+                normalizedGramReaction,
+                "Positive",
+                StringComparison.OrdinalIgnoreCase);
+
+        var isGramNegative =
+            string.Equals(
+                normalizedGramReaction,
+                "Negative",
+                StringComparison.OrdinalIgnoreCase);
+
         var result = new WorksheetImportRow
         {
             // -------------------------------------------------
@@ -72,11 +132,7 @@ public class WorksheetImportMapper
             // Laboratory Characteristics
             // -------------------------------------------------
 
-            GramReaction =
-                GetNullableValue(
-                    row,
-                    columnMap,
-                    "GramReaction"),
+            GramReaction = normalizedGramReaction,
 
             Morphology =
                 GetNullableValue(
@@ -90,29 +146,27 @@ public class WorksheetImportMapper
                     columnMap,
                     "Hemolysis"),
 
-            Catalase =
-                GetNullableValue(
-                    row,
-                    columnMap,
-                    "Catalase"),
+            // Match Worksheet.js: If Gram-Negative (Negative), Catalase and Coagulase must be NULL
+            // GN -> Catalase & Coagulase must be NULL
+            Catalase = isGramNegative
+            ? null
+            : NormalizePositiveNegative(
+                GetNullableValue(row, columnMap, "Catalase")),
 
-            Oxidase =
-                GetNullableValue(
-                    row,
-                    columnMap,
-                    "Oxidase"),
+            Coagulase = isGramNegative
+            ? null
+            : NormalizePositiveNegative(GetNullableValue(row, columnMap, "Coagulase")),
 
-            Coagulase =
-                GetNullableValue(
-                    row,
-                    columnMap,
-                    "Coagulase"),
+            // GP -> Oxidase & LactoseFermentation must be NULL
+            Oxidase = isGramPositive
+            ? null
+            : NormalizePositiveNegative(
+                GetNullableValue(row, columnMap, "Oxidase")),
 
-            LactoseFermentation =
-                GetNullableValue(
-                    row,
-                    columnMap,
-                    "LactoseFermentation"),
+            LactoseFermentation = isGramPositive
+            ? null
+            : NormalizePositiveNegative(
+                GetNullableValue(row, columnMap, "LactoseFermentation")),
 
             Comments =
                 GetNullableValue(
@@ -156,7 +210,7 @@ public class WorksheetImportMapper
         };
 
         // =====================================================
-        // Dynamic AST Columns
+        // Dynamic AST Columns (Resolves Readable Name -> SQL Code)
         // =====================================================
 
         foreach (var column in columnMap)
@@ -173,16 +227,19 @@ public class WorksheetImportMapper
 
             if (micMatch.Success)
             {
+                var headerAntibioticToken =
+                    micMatch.Groups[1].Value.Trim();
+
                 var antibioticCode =
-                    micMatch.Groups[1]
-                        .Value
-                        .ToUpperInvariant();
+                    ResolveAntibioticCode(headerAntibioticToken);
 
                 result.MICResults[antibioticCode] =
                     GetNullableValue(
                         row,
                         columnMap,
                         columnName);
+
+                continue;
             }
 
             // ---------------------------------------------
@@ -194,13 +251,13 @@ public class WorksheetImportMapper
 
             if (interpretationMatch.Success)
             {
-                var antibioticCode =
-                    interpretationMatch.Groups[1]
-                        .Value
-                        .ToUpperInvariant();
+                var headerAntibioticToken =
+                    interpretationMatch.Groups[1].Value.Trim();
 
-                result.InterpretationResults[
-                    antibioticCode] =
+                var antibioticCode =
+                    ResolveAntibioticCode(headerAntibioticToken);
+
+                result.InterpretationResults[antibioticCode] =
                     GetNullableValue(
                         row,
                         columnMap,
@@ -242,9 +299,64 @@ public class WorksheetImportMapper
                     header,
                     cell.Address.ColumnNumber);
             }
+
+            // Also register space-stripped alias for fixed columns (e.g., "Accepted ID" -> "AcceptedID")
+            if (!header.EndsWith("_MIC", StringComparison.OrdinalIgnoreCase) &&
+                !header.EndsWith("_INT", StringComparison.OrdinalIgnoreCase))
+            {
+                var compactHeader = header.Replace(" ", string.Empty);
+                if (!string.IsNullOrWhiteSpace(compactHeader) &&
+                    !columnMap.ContainsKey(compactHeader))
+                {
+                    columnMap.Add(
+                        compactHeader,
+                        cell.Address.ColumnNumber);
+                }
+            }
         }
 
         return columnMap;
+    }
+
+    // =====================================================
+    // Resolve Antibiotic Name or Code -> SQL Code
+    // =====================================================
+
+    private string ResolveAntibioticCode(string headerToken)
+    {
+        if (_nameToCodeMap.TryGetValue(headerToken, out var code))
+            return code;
+
+        var normalized = NormalizeKey(headerToken);
+        if (_nameToCodeMap.TryGetValue(normalized, out code))
+            return code;
+
+        return headerToken.ToUpperInvariant();
+    }
+
+    private static string NormalizeKey(string value)
+    {
+        return Regex.Replace(value.Trim(), @"[\s\-_/]+", string.Empty);
+    }
+
+    // =====================================================
+    // Normalize Lookup Values
+    // =====================================================
+
+    private static string? NormalizePositiveNegative(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        var trimmed = value.Trim();
+
+        if (string.Equals(trimmed, "Positive", StringComparison.OrdinalIgnoreCase))
+            return "Positive";
+
+        if (string.Equals(trimmed, "Negative", StringComparison.OrdinalIgnoreCase))
+            return "Negative";
+
+        return trimmed;
     }
 
     // =====================================================

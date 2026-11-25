@@ -18,6 +18,9 @@ public class DataRequestService(
     INotificationService notificationService,
     UserManager<ApplicationUser> userManager) : IDataRequestService
 {
+    private const int DownloadValidityHours = 72;
+    private const int RejectedRetentionHours = 72;
+
     private static readonly JsonSerializerOptions s_caseInsensitiveJsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
@@ -548,17 +551,47 @@ public class DataRequestService(
 
     // ============================================================
     // GET CURRENT USER'S DATA REQUESTS
+    //
+    // - Pending: remains Pending indefinitely.
+    // - Approved: transitions to Expired 72h after FirstDownloadedAt.
+    // - Rejected: hidden from user's My Requests 72h after ReviewedAt
+    //   (retained in database for audit tracking).
     // ============================================================
 
     public async Task<List<DataRequest>> GetUserRequestsAsync(
         string userId,
         CancellationToken cancellationToken = default)
     {
-        return await context.DataRequests
-            .AsNoTracking()
+        var now = EastAfricaTime.Now;
+        var rejectedCutoff = now.AddHours(-RejectedRetentionHours);
+
+        var requests = await context.DataRequests
             .Where(x => x.RequestedByUserID == userId)
             .OrderByDescending(x => x.RequestedAt)
             .ToListAsync(cancellationToken);
+
+        var hasStatusUpdates = false;
+
+        foreach (var request in requests)
+        {
+            if (string.Equals(request.Status, "Approved", StringComparison.OrdinalIgnoreCase) &&
+                request.ExpiresAt.HasValue &&
+                now >= request.ExpiresAt.Value)
+            {
+                request.Status = "Expired";
+                hasStatusUpdates = true;
+            }
+        }
+
+        if (hasStatusUpdates)
+        {
+            await context.SaveChangesAsync(cancellationToken);
+        }
+
+        return [.. requests.Where(x =>
+    !string.Equals(x.Status, "Rejected", StringComparison.OrdinalIgnoreCase) ||
+    x.ReviewedAt is null ||
+    x.ReviewedAt > rejectedCutoff)];
     }
 
 
@@ -730,6 +763,12 @@ public class DataRequestService(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(dataRequest);
+
+        if (dataRequest.IsExpired)
+        {
+            throw new InvalidOperationException(
+                "This data request has expired and can no longer be exported.");
+        }
 
         if (!string.Equals(
                 dataRequest.Status,
@@ -954,7 +993,7 @@ public class DataRequestService(
 
 
     // ============================================================
-    // MARK REQUEST AS EXPORTED
+    // MARK REQUEST AS EXPORTED (ANCHORS 72-HOUR TIMER ON FIRST DOWNLOAD)
     // ============================================================
 
     public async Task MarkRequestAsExportedAsync(
@@ -968,9 +1007,46 @@ public class DataRequestService(
             ?? throw new InvalidOperationException(
                 "The data request could not be found.");
 
-        request.ExportedAt = EastAfricaTime.Now;
+        var now = EastAfricaTime.Now;
+        request.ExportedAt = now;
+
+        // Anchor the 72-hour window strictly to the first download;
+        // subsequent re-downloads must not reset the timer.
+        if (!request.FirstDownloadedAt.HasValue)
+        {
+            request.FirstDownloadedAt = now;
+            request.ExpiresAt = now.AddHours(DownloadValidityHours);
+        }
 
         await context.SaveChangesAsync(cancellationToken);
+    }
+
+
+    // ============================================================
+    // PERSIST EXPIRED STATUS IF ELAPSED
+    // ============================================================
+
+    public async Task ExpireIfElapsedAsync(
+        int dataRequestId,
+        CancellationToken cancellationToken = default)
+    {
+        var request = await context.DataRequests
+            .FirstOrDefaultAsync(
+                x => x.DataRequestID == dataRequestId,
+                cancellationToken);
+
+        if (request is null)
+        {
+            return;
+        }
+
+        if (string.Equals(request.Status, "Approved", StringComparison.OrdinalIgnoreCase) &&
+            request.ExpiresAt.HasValue &&
+            EastAfricaTime.Now >= request.ExpiresAt.Value)
+        {
+            request.Status = "Expired";
+            await context.SaveChangesAsync(cancellationToken);
+        }
     }
 
 

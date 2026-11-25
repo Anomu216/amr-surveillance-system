@@ -50,6 +50,24 @@
         width: 100%;
     }
 
+    .phenotype-filter-group .form-check-input {
+        cursor: pointer;
+    }
+
+    .phenotype-filter-group .form-check-label {
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .phenotype-swatch {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+        vertical-align: middle;
+        margin-right: 4px;
+    }
+
     /* Prevent Select2 multi-select from overflowing or truncating pills */
     .report-view-shell .select2-container {
         width: 100% !important;
@@ -378,6 +396,55 @@
             <div class="min-w-0">
                 <h5 class="mb-0 text-break">6-Period Longitudinal Surveillance Rollup (21st – 20th Cycles)</h5>
                 <small class="text-muted">Tracks Patients, Recovered Isolates (G), ESKAPE+, MDR, MRSA, CRE, and ESBL trends across the last 6 reporting periods</small>
+            </div>
+
+            <!-- Interactive Phenotype Checkboxes (All 4 selected by default) -->
+            <div class="d-flex flex-wrap align-items-center gap-3 phenotype-filter-group no-print" id="sixPeriodPhenotypeToggles">
+                <span class="text-muted small fw-semibold">Phenotypes:</span>
+
+                <div class="form-check form-check-inline mb-0">
+                    <input class="form-check-input js-phenotype-checkbox"
+                           type="checkbox"
+                           id="chkPhenotypeMDR"
+                           data-dataset-index="0"
+                           checked />
+                    <label class="form-check-label small" for="chkPhenotypeMDR">
+                        <span class="phenotype-swatch" style="background-color: #dc3545;"></span>GN-ESKAPEE MDR
+                    </label>
+                </div>
+
+                <div class="form-check form-check-inline mb-0">
+                    <input class="form-check-input js-phenotype-checkbox"
+                           type="checkbox"
+                           id="chkPhenotypeMRSA"
+                           data-dataset-index="1"
+                           checked />
+                    <label class="form-check-label small" for="chkPhenotypeMRSA">
+                        <span class="phenotype-swatch" style="background-color: #fd7e14;"></span>MRSA
+                    </label>
+                </div>
+
+                <div class="form-check form-check-inline mb-0">
+                    <input class="form-check-input js-phenotype-checkbox"
+                           type="checkbox"
+                           id="chkPhenotypeCRE"
+                           data-dataset-index="2"
+                           checked />
+                    <label class="form-check-label small" for="chkPhenotypeCRE">
+                        <span class="phenotype-swatch" style="background-color: #6f42c1;"></span>CRE
+                    </label>
+                </div>
+
+                <div class="form-check form-check-inline mb-0">
+                    <input class="form-check-input js-phenotype-checkbox"
+                           type="checkbox"
+                           id="chkPhenotypeESBL"
+                           data-dataset-index="3"
+                           checked />
+                    <label class="form-check-label small" for="chkPhenotypeESBL">
+                        <span class="phenotype-swatch" style="background-color: #0d6efd;"></span>ESBL
+                    </label>
+                </div>
             </div>
         </div>
         <div class="card-body">
@@ -757,40 +824,51 @@
             const creData = JSON.parse(ctx.dataset.cre || '[]');
             const esblData = JSON.parse(ctx.dataset.esbl || '[]');
 
-            new Chart(ctx, {
+            const allPhenotypeDatasets = [
+                {
+                    label: 'GN-ESKAPEE MDR (%)',
+                    data: gnMdrData,
+                    borderColor: '#dc3545',
+                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                    tension: 0.25
+                },
+                {
+                    label: 'MRSA (%)',
+                    data: mrsaData,
+                    borderColor: '#fd7e14',
+                    backgroundColor: 'rgba(253, 126, 20, 0.1)',
+                    tension: 0.25
+                },
+                {
+                    label: 'CRE (%)',
+                    data: creData,
+                    borderColor: '#6f42c1',
+                    backgroundColor: 'rgba(111, 66, 193, 0.1)',
+                    tension: 0.25
+                },
+                {
+                    label: 'ESBL (%)',
+                    data: esblData,
+                    borderColor: '#0d6efd',
+                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    tension: 0.25
+                }
+            ];
+
+            const phenotypeCheckboxes = Array.from(document.querySelectorAll('.js-phenotype-checkbox'));
+
+            function getSelectedDatasets() {
+                return phenotypeCheckboxes
+                    .filter(cb => cb.checked)
+                    .map(cb => allPhenotypeDatasets[Number(cb.dataset.datasetIndex)])
+                    .filter(Boolean);
+            }
+
+            const sixPeriodChart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
-                    datasets: [
-                        {
-                            label: 'GN-ESKAPEE MDR (%)',
-                            data: gnMdrData,
-                            borderColor: '#dc3545',
-                            backgroundColor: 'rgba(220, 53, 69, 0.1)',
-                            tension: 0.25
-                        },
-                        {
-                            label: 'MRSA (%)',
-                            data: mrsaData,
-                            borderColor: '#fd7e14',
-                            backgroundColor: 'rgba(253, 126, 20, 0.1)',
-                            tension: 0.25
-                        },
-                        {
-                            label: 'CRE (%)',
-                            data: creData,
-                            borderColor: '#6f42c1',
-                            backgroundColor: 'rgba(111, 66, 193, 0.1)',
-                            tension: 0.25
-                        },
-                        {
-                            label: 'ESBL (%)',
-                            data: esblData,
-                            borderColor: '#0d6efd',
-                            backgroundColor: 'rgba(13, 110, 253, 0.1)',
-                            tension: 0.25
-                        }
-                    ]
+                    datasets: getSelectedDatasets()
                 },
                 options: {
                     responsive: true,
@@ -801,7 +879,8 @@
                             labels: {
                                 boxWidth: 14,
                                 padding: 12
-                            }
+                            },
+                            onClick: () => {}
                         }
                     },
                     scales: {
@@ -812,6 +891,13 @@
                         }
                     }
                 }
+            });
+
+            phenotypeCheckboxes.forEach(cb => {
+                cb.addEventListener('change', function () {
+                    sixPeriodChart.data.datasets = getSelectedDatasets();
+                    sixPeriodChart.update();
+                });
             });
         }
     </script>
