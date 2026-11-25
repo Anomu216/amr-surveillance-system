@@ -1,0 +1,392 @@
+﻿@model AMRSurveillance.ViewModels.GenomicsRecordViewModel
+
+@{
+    ViewData["Title"] = "Genomics Record Details";
+
+    var geneValues = Model.GeneValues
+        ?? new Dictionary<string, bool?>();
+
+    string DisplayValue(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? "—" : value;
+
+    string DisplayGeneResult(bool? value) =>
+        value == true ? "Detected"
+        : value == false ? "Not detected"
+        : "Unknown / Not recorded";
+}
+
+<div class="container-fluid py-4">
+
+    <!-- Page heading -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">Genomics Record Details</h2>
+            <p class="text-muted mb-0">
+                Sequencing metadata, genome characteristics, and gene results for this isolate.
+            </p>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>
+                Back to Records
+            </a>
+
+            <a asp-action="Edit"
+               asp-route-isolateId="@Model.IsolateID"
+               class="btn btn-primary">
+                <i class="bi bi-pencil-square me-1"></i>
+                Edit Record
+            </a>
+        </div>
+    </div>
+
+    <!-- Isolate summary -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex flex-wrap align-items-center gap-3">
+                <div class="rounded-3 bg-primary bg-opacity-10 text-primary p-3">
+                    <i class="bi bi-dna fs-2"></i>
+                </div>
+
+                <div class="flex-grow-1">
+                    <div class="text-muted small">Isolate ID</div>
+                    <h3 class="fw-bold mb-1">@Model.IsolateID</h3>
+                    <div class="text-muted">
+                        KEN ID: @DisplayValue(Model.KENID)
+                        <span class="mx-2">|</span>
+                        DNA Sample: @DisplayValue(Model.DNASampleID)
+                    </div>
+                </div>
+
+                <div>
+                    @if (Model.CompleteGenome == true)
+                    {
+                        <span class="badge bg-success fs-6">Complete genome</span>
+                    }
+                    else if (Model.CompleteGenome == false)
+                    {
+                        <span class="badge bg-secondary fs-6">Incomplete genome</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-light text-dark border fs-6">
+                            Completion not recorded
+                        </span>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Identification and project information -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0 fw-semibold">
+                <i class="bi bi-upc-scan me-2 text-primary"></i>
+                Identification and Project Information
+            </h5>
+        </div>
+
+        <div class="card-body">
+            <div class="row g-4">
+                <div class="col-12 col-md-4">
+                    <div class="text-muted small mb-1">Isolate ID</div>
+                    <div class="fw-semibold">@Model.IsolateID</div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="text-muted small mb-1">KEN ID</div>
+                    <div>@DisplayValue(Model.KENID)</div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="text-muted small mb-1">MRSN ID</div>
+                    <div>@DisplayValue(Model.MRSNID)</div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="text-muted small mb-1">DNA Sample ID</div>
+                    <div>@DisplayValue(Model.DNASampleID)</div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="text-muted small mb-1">Genomic ONT ID</div>
+                    <div>@DisplayValue(Model.GenomicONTID)</div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="text-muted small mb-1">Genomic ILM ID</div>
+                    <div>@DisplayValue(Model.GenomicILMID)</div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="text-muted small mb-1">Project Code</div>
+                    <div>@DisplayValue(Model.ProjectCode)</div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="text-muted small mb-1">Sequencing Run ID</div>
+                    <div>@DisplayValue(Model.SeqRunID)</div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="text-muted small mb-1">Submitting Protocol</div>
+                    <div>@DisplayValue(Model.SubmittingProtocol)</div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="text-muted small mb-1">WHONET ID</div>
+                    <div>@DisplayValue(Model.WHONETID)</div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="text-muted small mb-1">WGS ID</div>
+                    <div>@DisplayValue(Model.WGSID)</div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="text-muted small mb-1">Sequencing Date</div>
+                    <div>
+                        @(Model.SequencingDate?.ToString("dd MMMM yyyy") ?? "Not recorded")
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assembly information -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0 fw-semibold">
+                <i class="bi bi-cpu me-2 text-primary"></i>
+                Genome Assembly Characteristics
+            </h5>
+        </div>
+
+        <div class="card-body">
+            <div class="row g-4">
+                <div class="col-6 col-md-3">
+                    <div class="text-muted small mb-1">Genome Length</div>
+                    <div class="fs-5 fw-semibold">
+                        @(Model.GenomeLength?.ToString("N0") ?? "—")
+                    </div>
+                    <small class="text-muted">bp</small>
+                </div>
+
+                <div class="col-6 col-md-3">
+                    <div class="text-muted small mb-1">GC Content</div>
+                    <div class="fs-5 fw-semibold">
+                        @(Model.GCPercent?.ToString("0.##") ?? "—")
+                    </div>
+                    <small class="text-muted">%</small>
+                </div>
+
+                <div class="col-6 col-md-3">
+                    <div class="text-muted small mb-1">Number of Contigs</div>
+                    <div class="fs-5 fw-semibold">
+                        @(Model.NoOfContigs?.ToString("N0") ?? "—")
+                    </div>
+                </div>
+
+                <div class="col-6 col-md-3">
+                    <div class="text-muted small mb-1">Assembly N50</div>
+                    <div class="fs-5 fw-semibold">
+                        @(Model.AssemblyN50?.ToString("N0") ?? "—")
+                    </div>
+                </div>
+
+                <div class="col-6 col-md-3">
+                    <div class="text-muted small mb-1">Number of Plasmids</div>
+                    <div class="fs-5 fw-semibold">
+                        @(Model.NoOfPlasmids?.ToString("N0") ?? "—")
+                    </div>
+                </div>
+
+                <div class="col-6 col-md-3">
+                    <div class="text-muted small mb-1">Genome Status</div>
+                    <div class="fw-semibold">
+                        @(Model.CompleteGenome == true ? "Complete"
+                                                : Model.CompleteGenome == false ? "Incomplete"
+                                                : "Not recorded")
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Typing and classification -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0 fw-semibold">
+                <i class="bi bi-diagram-3 me-2 text-primary"></i>
+                Typing and Classification
+            </h5>
+        </div>
+
+        <div class="card-body">
+            <div class="row g-4">
+                <div class="col-12 col-md-4">
+                    <div class="text-muted small mb-1">Strain Type</div>
+                    <div>@DisplayValue(Model.StrainType)</div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="text-muted small mb-1">Phylogroup</div>
+                    <div>@DisplayValue(Model.Phylogroup)</div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="text-muted small mb-1">Serotype</div>
+                    <div>@DisplayValue(Model.Serotype)</div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="text-muted small mb-1">Fim Type</div>
+                    <div>@DisplayValue(Model.Fimtype)</div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="text-muted small mb-1">SCCmec Type</div>
+                    <div>@DisplayValue(Model.SCCmecType)</div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="text-muted small mb-1">Spa Type</div>
+                    <div>@DisplayValue(Model.SpaType)</div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="text-muted small mb-1">O Locus</div>
+                    <div>@DisplayValue(Model.OLocus)</div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="text-muted small mb-1">K Locus</div>
+                    <div>@DisplayValue(Model.KLocus)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scores -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0 fw-semibold">
+                <i class="bi bi-graph-up me-2 text-primary"></i>
+                Genomic Scores
+            </h5>
+        </div>
+
+        <div class="card-body">
+            <div class="row g-4">
+                <div class="col-12 col-md-6">
+                    <div class="text-muted small mb-1">Virulence Score</div>
+                    <div class="fs-5 fw-semibold">
+                        @(Model.VirulenceScore?.ToString("0.##") ?? "—")
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-6">
+                    <div class="text-muted small mb-1">Resistance Score</div>
+                    <div class="fs-5 fw-semibold">
+                        @(Model.ResistanceScore?.ToString("0.##") ?? "—")
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gene results -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <h5 class="mb-0 fw-semibold">
+                    <i class="bi bi-shield-check me-2 text-primary"></i>
+                    Gene Detection Results
+                </h5>
+
+                <span class="badge bg-primary">
+                    @geneValues.Count(g => g.Value.HasValue) results recorded
+                </span>
+            </div>
+        </div>
+
+        <div class="card-body">
+            @if (geneValues.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Gene</th>
+                                <th>Result</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var gene in geneValues.OrderBy(g => g.Key))
+                            {
+                                <tr>
+                                    <td class="fw-semibold">@gene.Key</td>
+                                    <td>
+                                        @if (gene.Value == true)
+                                        {
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-check-circle me-1"></i>
+                                                Detected
+                                            </span>
+                                        }
+                                        else if (gene.Value == false)
+                                        {
+                                            <span class="badge bg-danger">
+                                                <i class="bi bi-x-circle me-1"></i>
+                                                Not detected
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">
+                                                @DisplayGeneResult(gene.Value)
+                                            </span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-4">
+                    <i class="bi bi-shield display-5 text-muted"></i>
+                    <p class="text-muted mt-3 mb-0">
+                        No registered gene results are available for this record.
+                    </p>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Bottom actions -->
+    <div class="d-flex flex-wrap justify-content-end gap-2">
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            Back to Records
+        </a>
+
+        <a asp-action="Edit"
+           asp-route-isolateId="@Model.IsolateID"
+           class="btn btn-primary">
+            <i class="bi bi-pencil-square me-1"></i>
+            Edit Record
+        </a>
+
+        <a asp-action="Delete"
+           asp-route-isolateId="@Model.IsolateID"
+           class="btn btn-outline-danger">
+            <i class="bi bi-trash me-1"></i>
+            Delete Record
+        </a>
+    </div>
+
+</div>

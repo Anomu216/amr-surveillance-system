@@ -1,0 +1,312 @@
+﻿@model AMRSurveillance.ViewModels.PatientViewModel
+
+@{
+    var selectedSkinSymptoms = (Model.SkinInfectionSymptoms ?? string.Empty)
+        .Split(
+            ';',
+            StringSplitOptions.RemoveEmptyEntries |
+            StringSplitOptions.TrimEntries
+        )
+        .Where(s => !string.Equals(s, "N/A", StringComparison.OrdinalIgnoreCase))
+        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+}
+
+<div class="card section-card">
+
+    <div class="card-header">
+
+        <h5 class="mb-0">
+
+            <i class="bi bi-clipboard-pulse me-2"></i>
+            Clinical Presentation
+
+        </h5>
+
+        <small class="text-muted">
+            Record the patient's presenting clinical condition.
+        </small>
+
+    </div>
+
+
+    <div class="card-body">
+
+        <!-- ========================================= -->
+        <!-- Clinical Presentation -->
+        <!-- ========================================= -->
+
+        <div class="mb-4">
+
+            <label asp-for="ClinicalPresentation"
+                   class="form-label fw-semibold">
+
+                Clinical Presentation
+                <span class="text-danger">*</span>
+
+            </label>
+
+            <select asp-for="ClinicalPresentation"
+                    asp-items="Model.ClinicalPresentationList"
+                    class="form-select"
+                    id="ClinicalPresentation">
+            </select>
+
+            <div class="invalid-feedback"></div>
+
+            <span asp-validation-for="ClinicalPresentation"
+                  class="text-danger small">
+            </span>
+
+        </div>
+
+
+        <!-- ========================================= -->
+        <!-- Skin Infection Symptoms -->
+        <!-- Displayed only when applicable -->
+        <!-- ========================================= -->
+
+        <div class="mb-4"
+             id="skinInfectionSymptomsSection">
+
+            <label class="form-label fw-semibold">
+                Skin Infection Symptoms
+            </label>
+
+            <div class="border rounded p-3 bg-light"
+                 id="skinInfectionSymptomsContainer">
+
+                <div class="row">
+
+                    @foreach (var symptom in Model.SkinInfectionSymptomsList)
+                    {
+                        if (string.IsNullOrWhiteSpace(symptom.Value) ||
+                        string.Equals(symptom.Value.Trim(), "N/A", StringComparison.OrdinalIgnoreCase))
+                        {
+                            continue;
+                        }
+
+                        <div class="col-md-6 col-lg-4 mb-2">
+
+                            <div class="form-check">
+
+                                <input class="form-check-input skin-symptom"
+                                       type="checkbox"
+                                       name="SkinInfectionSymptomsSelected"
+                                       value="@symptom.Value"
+                                       id="symptom_@symptom.Value.GetHashCode()"
+                                       checked="@selectedSkinSymptoms.Contains(symptom.Value.Trim())" />
+
+                                <label class="form-check-label"
+                                       for="symptom_@symptom.Value.GetHashCode()">
+
+                                    @symptom.Text
+
+                                </label>
+
+                            </div>
+
+                        </div>
+                    }
+
+                </div>
+
+            </div>
+
+            <input type="hidden"
+                   asp-for="SkinInfectionSymptoms"
+                   id="SkinInfectionSymptoms" />
+
+            <span asp-validation-for="SkinInfectionSymptoms"
+                  class="text-danger small">
+            </span>
+
+        </div>
+
+
+        <!-- ========================================= -->
+        <!-- Patient Type -->
+        <!-- ========================================= -->
+
+        <div class="mb-4">
+
+            <label asp-for="PatientType"
+                   class="form-label fw-semibold">
+
+                Patient Type
+                <span class="text-danger">*</span>
+
+            </label>
+
+            <select asp-for="PatientType"
+                    asp-items="Model.PatientTypeList"
+                    class="form-select"
+                    id="PatientType">
+            </select>
+
+            <div class="invalid-feedback"></div>
+
+            <span asp-validation-for="PatientType"
+                  class="text-danger small">
+            </span>
+
+        </div>
+
+
+        <!-- ========================================= -->
+        <!-- Presentation Date -->
+        <!-- ========================================= -->
+
+        <div class="mb-4">
+
+            <label asp-for="PresentationDate"
+                   class="form-label fw-semibold">
+
+                Date of Presentation
+                <span class="text-danger">*</span>
+
+            </label>
+
+            <input asp-for="PresentationDate"
+                   class="form-control"
+                   type="date"
+                   id="PresentationDate"
+                   max="@DateTime.Today.ToString("yyyy-MM-dd")"
+                   autocomplete="off" />
+
+            <div class="invalid-feedback"></div>
+
+            <span asp-validation-for="PresentationDate"
+                  class="text-danger small">
+            </span>
+
+        </div>
+
+
+        <!-- ========================================= -->
+        <!-- Hospital Location -->
+        <!-- ========================================= -->
+
+        <div class="mb-4">
+
+            <label asp-for="HospitalLocation"
+                   class="form-label fw-semibold">
+
+                Hospital Location
+
+            </label>
+
+            <select asp-for="HospitalLocation"
+                    asp-items="Model.HospitalLocationList"
+                    class="form-select"
+                    id="HospitalLocation">
+            </select>
+
+            <div class="invalid-feedback"></div>
+
+            <span asp-validation-for="HospitalLocation"
+                  class="text-danger small">
+            </span>
+
+        </div>
+
+
+        <!-- ========================================= -->
+        <!-- Inpatient-only Fields -->
+        <!-- ========================================= -->
+
+        <div class="mb-4"
+             id="hospitalWardContainer">
+
+            <label asp-for="HospitalWard"
+                   class="form-label fw-semibold">
+
+                Hospital Ward
+
+            </label>
+
+            <input asp-for="HospitalWard"
+                   class="form-control"
+                   id="HospitalWard"
+                   autocomplete="off" />
+
+            <div class="invalid-feedback"></div>
+
+            <span asp-validation-for="HospitalWard"
+                  class="text-danger small">
+            </span>
+
+        </div>
+
+
+        <div class="mb-4"
+             id="icuContainer">
+
+            <label asp-for="ICUAdmission"
+                   class="form-label fw-semibold">
+
+                ICU Admission
+
+            </label>
+
+            <select asp-for="ICUAdmission"
+                    asp-items="Model.YesNoList"
+                    class="form-select"
+                    id="ICUAdmission">
+            </select>
+
+            <div class="invalid-feedback"></div>
+
+            <span asp-validation-for="ICUAdmission"
+                  class="text-danger small">
+            </span>
+
+        </div>
+
+
+        <div class="mb-3"
+             id="wardAdmissionContainer">
+
+            <label asp-for="WardAdmission"
+                   class="form-label fw-semibold">
+
+                Ward Admission
+
+            </label>
+
+            <select asp-for="WardAdmission"
+                    asp-items="Model.YesNoList"
+                    class="form-select"
+                    id="WardAdmission">
+            </select>
+
+            <div class="invalid-feedback"></div>
+
+            <span asp-validation-for="WardAdmission"
+                  class="text-danger small">
+            </span>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+    (function () {
+        const section = document.getElementById("skinInfectionSymptomsSection");
+        const container = document.getElementById("skinInfectionSymptomsContainer");
+
+        if (!section || !container) return;
+
+        function syncSkinSectionVisibility() {
+            const isHidden = container.classList.contains("d-none") ||
+                container.style.display === "none";
+            section.classList.toggle("d-none", isHidden);
+        }
+
+        const observer = new MutationObserver(syncSkinSectionVisibility);
+        observer.observe(container, { attributes: true, attributeFilter: ["class", "style"] });
+
+        syncSkinSectionVisibility();
+    })();
+</script>

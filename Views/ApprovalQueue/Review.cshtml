@@ -1,0 +1,499 @@
+﻿@model AMRSurveillance.ViewModels.DataRequests.DataRequestReviewViewModel
+
+@{
+    ViewData["Title"] = "Review Data Request";
+    var isSelfApprovalBlocked = ViewBag.IsSelfApprovalBlocked is true;
+}
+
+<div class="container-fluid py-4">
+
+    <!-- PAGE HEADER -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+            <h3 class="mb-1">
+                <i class="bi bi-clipboard-check me-2"></i>
+                Review Data Request
+            </h3>
+
+            <p class="text-muted mb-0">
+                Review the requested data before approving or rejecting the request.
+            </p>
+        </div>
+
+        <a asp-action="Index"
+           class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>
+            Back to Queue
+        </a>
+
+    </div>
+
+
+    <!-- ERROR MESSAGE -->
+    @if (TempData["ErrorMessage"] is string errorMessage)
+    {
+        <div class="alert alert-danger alert-dismissible fade show"
+             role="alert">
+
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            @errorMessage
+
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Close">
+            </button>
+        </div>
+    }
+
+
+    <div class="row">
+
+        <!-- =====================================================
+             REQUEST DETAILS
+             ===================================================== -->
+
+        <div class="col-lg-5 mb-4">
+
+            <div class="card shadow-sm h-100">
+
+                <div class="card-header">
+                    <strong>
+                        <i class="bi bi-person me-2"></i>
+                        Request Details
+                    </strong>
+                </div>
+
+                <div class="card-body">
+
+                    <dl class="row mb-0">
+
+                        <dt class="col-sm-5">
+                            Request ID
+                        </dt>
+                        <dd class="col-sm-7">
+                            #@Model.DataRequestID
+                        </dd>
+
+
+                        <dt class="col-sm-5">
+                            Requested By
+                        </dt>
+                        <dd class="col-sm-7">
+                            @Model.RequesterName
+                        </dd>
+
+
+                        <dt class="col-sm-5">
+                            Requested On
+                        </dt>
+                        <dd class="col-sm-7">
+                            @Model.RequestedAt.ToString("dd MMM yyyy HH:mm") EAT
+                        </dd>
+
+
+                        <dt class="col-sm-5">
+                            Status
+                        </dt>
+                        <dd class="col-sm-7">
+
+                            @if (string.Equals(
+                                                        Model.Status,
+                                                        "Pending",
+                                                        StringComparison.OrdinalIgnoreCase))
+                            {
+                                <span class="badge bg-warning text-dark">
+                                    Pending
+                                </span>
+                            }
+                            else if (string.Equals(
+                            Model.Status,
+                            "Approved",
+                            StringComparison.OrdinalIgnoreCase))
+                            {
+                                <span class="badge bg-success">
+                                    Approved
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger">
+                                    Rejected
+                                </span>
+                            }
+
+                        </dd>
+
+
+                        <dt class="col-sm-5">
+                            Reason
+                        </dt>
+                        <dd class="col-sm-7">
+                            @Model.Reason
+                        </dd>
+
+                    </dl>
+
+                </div>
+            </div>
+
+        </div>
+
+
+        <!-- =====================================================
+             IDENTIFIERS AND FILTERS
+             ===================================================== -->
+
+        <div class="col-lg-7 mb-4">
+
+            <div class="card shadow-sm h-100">
+
+                <div class="card-header">
+                    <strong>
+                        <i class="bi bi-funnel me-2"></i>
+                        Request Criteria
+                    </strong>
+                </div>
+
+                <div class="card-body">
+
+                    @if (!string.IsNullOrWhiteSpace(Model.IdentifierType))
+                    {
+                        <div class="mb-3">
+
+                            <strong>Identifier Type:</strong>
+
+                            <div>
+                                @Model.IdentifierType
+                            </div>
+
+                        </div>
+                    }
+
+
+                    @if (Model.IdentifierValues.Any())
+                    {
+                        <div class="mb-3">
+
+                            <strong>Requested Identifiers:</strong>
+
+                            <div class="mt-2">
+                                @foreach (var identifier in Model.IdentifierValues)
+                                {
+                                    <span class="badge bg-light text-dark border me-1 mb-1">
+                                        @identifier
+                                    </span>
+                                }
+                            </div>
+
+                        </div>
+                    }
+
+
+                    @if (Model.StartDate.HasValue || Model.EndDate.HasValue)
+                    {
+                        <div class="mb-3">
+
+                            <strong>Date Range:</strong>
+
+                            <div>
+
+                                @if (Model.StartDate.HasValue)
+                                {
+                                    <span>
+                                        From:
+                                        @Model.StartDate.Value.ToString("dd MMM yyyy")
+                                    </span>
+                                }
+
+                                @if (Model.EndDate.HasValue)
+                                {
+                                    <span class="ms-3">
+                                        To:
+                                        @Model.EndDate.Value.ToString("dd MMM yyyy")
+                                    </span>
+                                }
+
+                            </div>
+
+                        </div>
+                    }
+
+
+                    @if (Model.FacilityIDs.Any())
+                    {
+                        <div class="mb-3">
+
+                            <strong>Facilities:</strong>
+
+                            <ul class="mb-0 mt-2">
+                                @foreach (var facility in Model.FacilityIDs)
+                                {
+                                    <li>@facility</li>
+                                }
+                            </ul>
+
+                        </div>
+                    }
+
+
+                    @if (Model.OrganismIDs.Any())
+                    {
+                        <div>
+
+                            <strong>Organisms:</strong>
+
+                            <ul class="mb-0 mt-2">
+                                @foreach (var organism in Model.OrganismIDs)
+                                {
+                                    <li>@organism</li>
+                                }
+                            </ul>
+
+                        </div>
+                    }
+
+
+                    @if (string.IsNullOrWhiteSpace(Model.IdentifierType)
+                                        && !Model.StartDate.HasValue
+                                        && !Model.EndDate.HasValue
+                                        && !Model.FacilityIDs.Any()
+                                        && !Model.OrganismIDs.Any())
+                    {
+                        <p class="text-muted mb-0">
+                            No additional filters were specified.
+                        </p>
+                    }
+
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================================================
+         REQUESTED DATA
+         ========================================================= -->
+
+    <div class="card shadow-sm mb-4">
+
+        <div class="card-header">
+            <strong>
+                <i class="bi bi-table me-2"></i>
+                Requested Tables and Columns
+            </strong>
+        </div>
+
+        <div class="card-body">
+
+            @if (Model.SelectedDatasets.Any())
+            {
+                <div class="row">
+
+                    @foreach (var dataset in Model.SelectedDatasets)
+                    {
+                        <div class="col-md-6 col-xl-4 mb-3">
+
+                            <div class="border rounded h-100">
+
+                                <div class="bg-light px-3 py-2 border-bottom">
+                                    <strong>
+                                        @dataset.Name
+                                    </strong>
+                                </div>
+
+                                <div class="p-3">
+
+                                    @if (dataset.Columns.Any())
+                                    {
+                                        <ul class="mb-0 ps-3">
+
+                                            @foreach (var column in dataset.Columns)
+                                            {
+                                                <li>
+                                                    @column.Text
+                                                </li>
+                                            }
+
+                                        </ul>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">
+                                            No columns selected.
+                                        </span>
+                                    }
+
+                                </div>
+
+                            </div>
+
+                        </div>
+                    }
+
+                </div>
+            }
+            else
+            {
+                <p class="text-muted mb-0">
+                    No data tables or columns were selected for this request.
+                </p>
+            }
+
+        </div>
+    </div>
+
+
+    <!-- =========================================================
+         APPROVAL ACTIONS
+         ========================================================= -->
+    @if (string.Equals(
+        Model.Status,
+        "Pending",
+        StringComparison.OrdinalIgnoreCase))
+    {
+        <div class="card shadow-sm">
+
+            <div class="card-header">
+                <strong>
+                    <i class="bi bi-check2-square me-2"></i>
+                    Review Decision
+                </strong>
+            </div>
+
+            <div class="card-body">
+
+                @if (isSelfApprovalBlocked)
+                {
+                    <div class="alert alert-warning mb-0" role="alert">
+                        <i class="bi bi-shield-lock me-2"></i>
+                        <strong>Segregation of Duties:</strong>
+                        You cannot approve or reject your own data request. Another Data Export Approver or a System Administrator must review this request.
+                    </div>
+                }
+                else
+                {
+                    <!-- APPROVE FORM -->
+                    <form asp-action="Approve"
+                          method="post"
+                          class="mb-4">
+
+                        @Html.AntiForgeryToken()
+
+                        <input type="hidden"
+                               name="id"
+                               value="@Model.DataRequestID" />
+
+                        <div class="mb-3">
+
+                            <label for="approveComments"
+                                   class="form-label">
+                                Approval Comments
+                                <span class="text-muted">
+                                    (optional)
+                                </span>
+                            </label>
+
+                            <textarea id="approveComments"
+                              name="reviewComments"
+                              class="form-control"
+                              rows="3"
+                              placeholder="Optional comments for the requester"></textarea>
+
+                        </div>
+
+                        <button type="submit"
+                                class="btn btn-success">
+
+                            <i class="bi bi-check-circle me-1"></i>
+                            Approve Request
+
+                        </button>
+
+                    </form>
+
+
+                    <hr />
+
+
+                    <!-- REJECT FORM -->
+                    <form asp-action="Reject"
+                          method="post">
+
+                        @Html.AntiForgeryToken()
+
+                        <input type="hidden"
+                               name="id"
+                               value="@Model.DataRequestID" />
+
+                        <div class="mb-3">
+
+                            <label for="rejectComments"
+                                   class="form-label">
+
+                                Reason for Rejection
+                                <span class="text-danger">*</span>
+
+                            </label>
+
+                            <textarea id="rejectComments"
+                              name="reviewComments"
+                              class="form-control"
+                              rows="3"
+                              required
+                              placeholder="Explain why this request cannot be approved"></textarea>
+
+                        </div>
+
+                        <button type="submit"
+                                class="btn btn-danger">
+
+                            <i class="bi bi-x-circle me-1"></i>
+                            Reject Request
+
+                        </button>
+
+                    </form>
+                }
+
+            </div>
+
+        </div>
+    }
+    else
+    {
+        <!-- =====================================================
+             COMPLETED REVIEW
+             ===================================================== -->
+
+        <div class="card shadow-sm">
+
+            <div class="card-body">
+
+                <h6>
+                    Review Completed
+                </h6>
+
+                @if (!string.IsNullOrWhiteSpace(Model.ReviewComments))
+                {
+                    <p class="mb-0">
+                        <strong>Review Comments:</strong>
+                        @Model.ReviewComments
+                    </p>
+                }
+                else
+                {
+                    <p class="text-muted mb-0">
+                        No review comments were provided.
+                    </p>
+                }
+
+            </div>
+
+        </div>
+    }
+
+</div>

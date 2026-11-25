@@ -1,0 +1,298 @@
+﻿@model AMRSurveillance.Imports.Models.ImportViewModel<AMRSurveillance.ViewModels.GenomicsRecordViewModel>
+
+@{
+    ViewData["Title"] = "Import Genomics Records";
+
+    var records = Model?.Records
+        ?? new List<AMRSurveillance.ViewModels.GenomicsRecordViewModel>();
+}
+
+<div class="container-fluid py-4">
+
+    <!-- Page heading -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">Import Genomics Records</h2>
+            <p class="text-muted mb-0">
+                Upload sequencing metadata and registered gene results from Excel.
+            </p>
+        </div>
+
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>
+            Back to Genomics Records
+        </a>
+    </div>
+
+    <!-- Import instructions -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <div class="d-flex align-items-start gap-3">
+                <div class="rounded-3 bg-primary bg-opacity-10 text-primary p-3">
+                    <i class="bi bi-file-earmark-spreadsheet fs-3"></i>
+                </div>
+
+                <div class="flex-grow-1">
+                    <h5 class="fw-semibold mb-2">Before you import</h5>
+                    <ol class="mb-3">
+                        <li>
+                            Download the Excel template containing the fixed genomics
+                            fields and currently registered gene columns.
+                        </li>
+                        <li>
+                            Enter the <strong>IsolateID</strong> for each record.
+                            It must match an isolate registered in the Worksheet module.
+                        </li>
+                        <li>
+                            Enter gene results using
+                            <strong>Detected</strong>,
+                            <strong>Not detected</strong>,
+                            <strong>Unknown</strong>, or
+                            <strong>Not tested</strong>.
+                        </li>
+                        <li>
+                            Upload the completed workbook and review validation results
+                            before confirming the import.
+                        </li>
+                    </ol>
+
+                    <a asp-action="DownloadImportTemplate"
+                       class="btn btn-primary">
+                        <i class="bi bi-download me-1"></i>
+                        Download Excel Template
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload form -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0 fw-semibold">
+                <i class="bi bi-cloud-arrow-up me-2 text-primary"></i>
+                Upload Workbook
+            </h5>
+        </div>
+
+        <div class="card-body">
+            <form asp-action="Import"
+                  method="post"
+                  enctype="multipart/form-data">
+
+                @Html.AntiForgeryToken()
+
+                <div class="mb-3">
+                    <label asp-for="File" class="form-label fw-semibold">
+                        Excel file
+                    </label>
+
+                    <input asp-for="File"
+                           type="file"
+                           class="form-control"
+                           accept=".xlsx,.xls"
+                           required />
+
+                    <div class="form-text">
+                        Select the completed Excel workbook. The file must use
+                        the expected column headings.
+                    </div>
+
+                    <span asp-validation-for="File"
+                          class="text-danger"></span>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check2-square me-1"></i>
+                        Upload and Validate
+                    </button>
+
+                    <a asp-action="Index" class="btn btn-outline-secondary">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @if (Model?.IsValidated == true)
+    {
+        <!-- Validation status -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body">
+                @if (Model.ReadyToImport)
+                {
+                    <div class="d-flex align-items-start gap-3">
+                        <i class="bi bi-check-circle-fill text-success fs-2"></i>
+                        <div>
+                            <h5 class="fw-semibold text-success mb-1">
+                                Validation successful
+                            </h5>
+                            <p class="text-muted mb-0">
+                                The workbook passed validation. Review the records
+                                below before confirming the import.
+                            </p>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="d-flex align-items-start gap-3">
+                        <i class="bi bi-exclamation-triangle-fill text-danger fs-2"></i>
+                        <div>
+                            <h5 class="fw-semibold text-danger mb-1">
+                                Validation requires attention
+                            </h5>
+                            <p class="text-muted mb-0">
+                                Correct the reported errors and upload the workbook again.
+                                Records will not be imported while validation errors remain.
+                            </p>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Validation errors -->
+        @if (Model.Errors != null && Model.Errors.Any())
+        {
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-semibold text-danger">
+                        <i class="bi bi-exclamation-circle me-2"></i>
+                        Validation Errors (@Model.Errors.Count)
+                    </h5>
+                </div>
+
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">Error details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var error in Model.Errors)
+                                {
+                                    <tr>
+                                        <td class="ps-3 text-danger">
+                                            @error
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Preview -->
+        @if (records.Any())
+        {
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <div>
+                            <h5 class="mb-1 fw-semibold">Import Preview</h5>
+                            <small class="text-muted">
+                                Review the fixed metadata and gene results.
+                            </small>
+                        </div>
+
+                        <span class="badge bg-primary">
+                            @records.Count record(s)
+                        </span>
+                    </div>
+                </div>
+
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">Isolate ID</th>
+                                    <th>KEN ID</th>
+                                    <th>DNA Sample ID</th>
+                                    <th>Sequencing Date</th>
+                                    <th>Strain Type</th>
+                                    <th>Serotype</th>
+                                    <th>Genome Length</th>
+                                    <th>Gene results</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var record in records)
+                                {
+                                    var geneCount = record.GeneValues?
+                                    .Count(g => g.Value.HasValue) ?? 0;
+
+                                    <tr>
+                                        <td class="ps-3 fw-semibold">
+                                            @record.IsolateID
+                                        </td>
+                                        <td>@(record.KENID ?? "—")</td>
+                                        <td>@(record.DNASampleID ?? "—")</td>
+                                        <td>
+                                            @(record.SequencingDate?.ToString("dd MMM yyyy") ?? "—")
+                                        </td>
+                                        <td>@(record.StrainType ?? "—")</td>
+                                        <td>@(record.Serotype ?? "—")</td>
+                                        <td>
+                                            @(record.GenomeLength?.ToString("N0") ?? "—")
+                                        </td>
+                                        <td>@geneCount recorded</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="p-3 border-top text-muted small">
+                        The preview displays selected columns. The complete
+                        validated records, including available gene results,
+                        are submitted when you confirm.
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Confirmation and clear actions -->
+        <div class="d-flex flex-wrap justify-content-between gap-2 mb-4">
+            <form asp-action="ClearImport" method="post">
+                @Html.AntiForgeryToken()
+
+                <button type="submit" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle me-1"></i>
+                    Clear Import
+                </button>
+            </form>
+
+            @if (Model.ReadyToImport)
+            {
+                <form asp-action="ConfirmImport" method="post"
+                      onsubmit="return confirm('Confirm importing these genomics records?');">
+                    @Html.AntiForgeryToken()
+
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-database-check me-1"></i>
+                        Confirm Import (@records.Count)
+                    </button>
+                </form>
+            }
+            else
+            {
+                <button type="button" class="btn btn-success" disabled>
+                    <i class="bi bi-lock me-1"></i>
+                    Confirm Import
+                </button>
+            }
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

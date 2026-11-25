@@ -1,0 +1,3035 @@
+﻿@model AMRSurveillance.ViewModels.DashboardViewModel
+
+@using System.Text.Json
+
+@{
+    ViewData["Title"] = "Dashboard";
+
+    var jsonOptions = new JsonSerializerOptions
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
+    var genomicFilterCount = new[]
+    {
+        Model.GenomicCharacteristic,
+        Model.GenomicCharacteristicValue,
+        Model.StrainType,
+        Model.Phylogroup,
+        Model.Serotype,
+        Model.SCCmecType,
+        Model.SpaType,
+        Model.OLocus,
+        Model.KLocus
+    }
+    .Count(value => !string.IsNullOrWhiteSpace(value));
+
+    var activeGlobalFilterCount =
+        (Model.StartDate.HasValue ? 1 : 0) +
+        (Model.EndDate.HasValue ? 1 : 0) +
+        (!string.IsNullOrWhiteSpace(Model.RecruitmentType) ? 1 : 0) +
+        (Model.IsGroupedByRecruitmentType ? 1 : 0) +
+        (!string.IsNullOrWhiteSpace(Model.FacilityOwnership) ? 1 : 0) +
+        Model.FacilityIDs.Count +
+        Model.OrganismIDs.Count;
+
+    var openAstTabOnLoad = Context.Request.Query.ContainsKey("ASTOrganismIDs");
+
+    var totalSubmitted = Model.TotalSubmittedSamples;
+    var acceptanceRate = totalSubmitted > 0 ? (Model.TotalPatients * 100.0 / totalSubmitted).ToString("F1") : "0.0";
+    var rejectionRate = totalSubmitted > 0 ? (Model.RejectedSamples * 100.0 / totalSubmitted).ToString("F1") : "0.0";
+    var positivityRate = Model.TotalIsolates > 0 ? (Model.PositiveCultures * 100.0 / Model.TotalIsolates).ToString("F1") : "0.0";
+    var mdrRate = Model.TotalIsolates > 0 ? (Model.MDRIsolates * 100.0 / Model.TotalIsolates).ToString("F1") : "0.0";
+    var wgsRate = Model.TotalIsolates > 0 ? (Model.SequencedIsolates * 100.0 / Model.TotalIsolates).ToString("F1") : "0.0";
+
+    var selectedFacilitySet = new HashSet<string>(Model.FacilityIDs, StringComparer.OrdinalIgnoreCase);
+    var selectedOrganismSet = new HashSet<string>(Model.OrganismIDs, StringComparer.OrdinalIgnoreCase);
+    var selectedAstOrganismSet = new HashSet<string>(Model.ASTOrganismIDs, StringComparer.OrdinalIgnoreCase);
+}
+
+<div class="dashboard-page">
+
+    <!-- ========================================================= -->
+    <!-- DASHBOARD HEADER                                          -->
+    <!-- ========================================================= -->
+
+    <div class="dashboard-header">
+
+        <div>
+            <div class="dashboard-title-row">
+                <h1 class="dashboard-title">
+                    AMR Surveillance Dashboard
+                </h1>
+                <span class="accepted-scope-badge" title="All KPIs, charts, and antibiograms exclude rejected samples">
+                    <i class="bi bi-patch-check-fill"></i>
+                    Accepted Samples Only
+                </span>
+                @if (!string.IsNullOrWhiteSpace(Model.RecruitmentType))
+                {
+                    <span class="recruitment-scope-badge" title="Filtered by recruitment strategy">
+                        <i class="bi bi-funnel-fill"></i>
+                        @Model.RecruitmentScopeLabel
+                    </span>
+                }
+                else if (Model.IsGroupedByRecruitmentType)
+                {
+                    <span class="recruitment-scope-badge" title="Stratified side-by-side comparison enabled">
+                        <i class="bi bi-columns-gap"></i>
+                        Grouped: Active vs. Passive
+                    </span>
+                }
+            </div>
+
+            <p class="dashboard-subtitle">
+                Publication-ready epidemiological, microbiological, and genomic surveillance summaries
+            </p>
+        </div>
+
+        <div class="dashboard-header-actions">
+
+            <div class="data-updated">
+                <i class="bi bi-clock-history"></i>
+                <span>
+                    Updated: @Model.DataUpdatedAt.ToString("dd MMM yyyy HH:mm") EAT
+                </span>
+            </div>
+
+            <a asp-action="ExportExcel"
+               asp-route-StartDate="@Model.StartDate?.ToString("yyyy-MM-dd")"
+               asp-route-EndDate="@Model.EndDate?.ToString("yyyy-MM-dd")"
+               asp-route-RecruitmentType="@Model.RecruitmentType"
+               asp-route-GroupByRecruitmentType="@Model.GroupByRecruitmentType"
+               asp-route-FacilityOwnership="@Model.FacilityOwnership"
+               class="btn btn-outline-success btn-sm">
+                <i class="bi bi-file-earmark-excel"></i>
+                <span>Export Excel</span>
+            </a>
+
+        </div>
+
+    </div>
+
+
+    <!-- ========================================================= -->
+    <!-- ERROR MESSAGE                                             -->
+    <!-- ========================================================= -->
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger dashboard-alert" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            @Model.ErrorMessage
+        </div>
+    }
+
+
+    <!-- ========================================================= -->
+    <!-- ROLLING 92-DAY DATA-DRIVEN SPIKE ALERTS                   -->
+    <!-- ========================================================= -->
+    @if (Model.HasDetectedSpikes)
+    {
+        <div class="alert alert-warning border-warning dashboard-alert shadow-sm mb-3" role="alert">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-1">
+                <div class="fw-bold text-dark">
+                    <i class="bi bi-exclamation-diamond-fill text-danger me-1"></i>
+                    Resistance Spike Alerts Detected (Rolling 92-Day Window vs. Historical Baseline, N &ge; 30)
+                </div>
+                <span class="badge rounded-pill text-bg-danger">
+                    @Model.DetectedSpikes.Count Active @(Model.DetectedSpikes.Count == 1 ? "Alert" : "Alerts")
+                </span>
+            </div>
+            <ul class="mb-0 ps-3 small text-dark">
+                @foreach (var spike in Model.DetectedSpikes)
+                {
+                    <li class="mt-1">@spike.SummaryMessage</li>
+                }
+            </ul>
+        </div>
+    }
+
+
+    <!-- ========================================================= -->
+    <!-- COLLAPSIBLE GLOBAL FILTERS                                -->
+    <!-- ========================================================= -->
+
+    <div class="dashboard-card filters-card">
+
+        <div class="filters-header">
+
+            <div class="filters-title">
+
+                <div class="filters-title-icon">
+                    <i class="bi bi-funnel"></i>
+                </div>
+
+                <div>
+                    <div class="d-flex align-items-center gap-2">
+                        <h2>Global Filters</h2>
+                        @if (activeGlobalFilterCount > 0)
+                        {
+                            <span class="badge rounded-pill text-bg-primary">@activeGlobalFilterCount active</span>
+                        }
+                    </div>
+                    <p>
+                        Filter accepted surveillance records by enrollment dates, recruitment strategy, facility, and organism.
+                    </p>
+                </div>
+
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+                @if (activeGlobalFilterCount > 0)
+                {
+                    <a asp-action="Index" class="btn btn-outline-danger btn-sm">
+                        <i class="bi bi-x-circle me-1"></i>Clear All
+                    </a>
+                }
+                <button class="btn btn-outline-secondary btn-sm"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#dashboardFilters"
+                        aria-expanded="@(activeGlobalFilterCount > 0 ? "true" : "false")"
+                        aria-controls="dashboardFilters">
+                    <i class="bi bi-chevron-down me-1"></i>
+                    <span>@(activeGlobalFilterCount > 0 ? "Filters" : "Show Filters")</span>
+                </button>
+            </div>
+
+        </div>
+
+        <div class="collapse @(activeGlobalFilterCount > 0 ? "show" : "")" id="dashboardFilters">
+
+            <div class="filters-body">
+
+                <form asp-action="Index" method="get">
+
+                    <div class="row g-3">
+
+                        <div class="col-12 col-sm-6 col-lg-2">
+                            <label asp-for="StartDate" class="form-label">Start Date</label>
+                            <input asp-for="StartDate" type="date" class="form-control form-control-sm" />
+                        </div>
+
+                        <div class="col-12 col-sm-6 col-lg-2">
+                            <label asp-for="EndDate" class="form-label">End Date</label>
+                            <input asp-for="EndDate" type="date" class="form-control form-control-sm" />
+                        </div>
+
+                        <div class="col-12 col-sm-6 col-lg-2">
+                            <label asp-for="RecruitmentType" class="form-label">Recruitment</label>
+                            <select asp-for="RecruitmentType" id="recruitmentTypeSelect" class="form-select form-select-sm">
+                                <option value="">All (Overall)</option>
+                                @foreach (var option in Model.RecruitmentTypeOptions)
+                                {
+                                    <option value="@option.Value">@option.Text</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-sm-6 col-lg-2">
+                            <label asp-for="FacilityOwnership" class="form-label">Ownership</label>
+                            <select asp-for="FacilityOwnership" class="form-select form-select-sm">
+                                <option value="">All ownership types</option>
+                                @foreach (var option in Model.FacilityOwnershipOptions)
+                                {
+                                    <option value="@option.Value">@option.Text</option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Multi-select Checkbox Dropdown: Facilities -->
+                        <div class="col-12 col-sm-6 col-lg-2">
+                            <label class="form-label">Facilities</label>
+                            <div class="dropdown multi-check-dropdown" data-placeholder="All facilities" data-item-label="facility" data-items-label="facilities">
+                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center multi-check-toggle"
+                                        type="button"
+                                        data-bs-toggle="dropdown"
+                                        data-bs-auto-close="outside"
+                                        aria-expanded="false">
+                                    <span class="multi-check-summary text-truncate">All facilities</span>
+                                </button>
+                                <div class="dropdown-menu w-100 p-2 shadow-sm multi-check-menu">
+                                    <input type="text"
+                                           class="form-control form-control-sm mb-2 multi-check-search"
+                                           placeholder="Search facilities..."
+                                           autocomplete="off" />
+                                    <div class="d-flex justify-content-between align-items-center mb-1 pb-1 border-bottom small">
+                                        <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none multi-check-all">Select all</button>
+                                        <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none text-danger multi-check-clear">Clear</button>
+                                    </div>
+                                    <div class="multi-check-list">
+                                        @foreach (var facility in Model.Facilities)
+                                        {
+                                            var isChecked = selectedFacilitySet.Contains(facility.Value);
+                                            var checkId = $"fac_{facility.Value}";
+                                            <div class="form-check multi-check-item" data-search-text="@facility.Text.ToLowerInvariant()">
+                                                <input class="form-check-input multi-check-input"
+                                                       type="checkbox"
+                                                       name="FacilityIDs"
+                                                       value="@facility.Value"
+                                                       id="@checkId"
+                                                       checked="@isChecked" />
+                                                <label class="form-check-label small" for="@checkId">
+                                                    @facility.Text
+                                                </label>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Multi-select Checkbox Dropdown: Global Organisms -->
+                        <div class="col-12 col-sm-6 col-lg-2">
+                            <label class="form-label">Organisms</label>
+                            <div class="dropdown multi-check-dropdown" data-placeholder="All organisms" data-item-label="organism" data-items-label="organisms">
+                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center multi-check-toggle"
+                                        type="button"
+                                        data-bs-toggle="dropdown"
+                                        data-bs-auto-close="outside"
+                                        aria-expanded="false">
+                                    <span class="multi-check-summary text-truncate">All organisms</span>
+                                </button>
+                                <div class="dropdown-menu w-100 p-2 shadow-sm multi-check-menu">
+                                    <input type="text"
+                                           class="form-control form-control-sm mb-2 multi-check-search"
+                                           placeholder="Search organisms..."
+                                           autocomplete="off" />
+                                    <div class="d-flex justify-content-between align-items-center mb-1 pb-1 border-bottom small">
+                                        <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none multi-check-all">Select all</button>
+                                        <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none text-danger multi-check-clear">Clear</button>
+                                    </div>
+                                    <div class="multi-check-list">
+                                        @foreach (var organism in Model.Organisms)
+                                        {
+                                            var isChecked = selectedOrganismSet.Contains(organism.Value);
+                                            var checkId = $"org_{organism.Value}";
+                                            <div class="form-check multi-check-item" data-search-text="@organism.Text.ToLowerInvariant()">
+                                                <input class="form-check-input multi-check-input"
+                                                       type="checkbox"
+                                                       name="OrganismIDs"
+                                                       value="@organism.Value"
+                                                       id="@checkId"
+                                                       checked="@isChecked" />
+                                                <label class="form-check-label small" for="@checkId">
+                                                    @organism.Text
+                                                </label>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                <div class="filter-actions">
+                                    <button type="submit" class="btn btn-primary btn-sm">
+                                        <i class="bi bi-funnel-fill me-1"></i>
+                                        Apply Filters
+                                    </button>
+                                    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                                        <i class="bi bi-arrow-counterclockwise me-1"></i>
+                                        Reset
+                                    </a>
+                                </div>
+
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           role="switch"
+                                           asp-for="GroupByRecruitmentType"
+                                           id="groupByRecruitmentSwitch"
+                                           disabled="@(!string.IsNullOrWhiteSpace(Model.RecruitmentType))" />
+                                    <label class="form-check-label small fw-semibold text-secondary" for="groupByRecruitmentSwitch">
+                                        Group by Active vs. Passive (ISO)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ========================================================= -->
+    <!-- COMPACT KPI STRIP                                         -->
+    <!-- ========================================================= -->
+
+    <div class="kpi-grid @(Model.ShowMRSAKpi ? "kpi-grid-7" : "")">
+
+        <div class="kpi-card kpi-card-accepted">
+            <div class="kpi-icon kpi-patients">
+                <i class="bi bi-people"></i>
+            </div>
+            <div class="kpi-content">
+                <div class="kpi-label">Accepted Samples</div>
+                <div class="kpi-value">@Model.TotalPatients.ToString("N0")</div>
+                <div class="kpi-subtext">@acceptanceRate% of @totalSubmitted.ToString("N0") submitted</div>
+            </div>
+        </div>
+
+        <div class="kpi-card kpi-card-rejected">
+            <div class="kpi-icon kpi-rejected">
+                <i class="bi bi-x-octagon"></i>
+            </div>
+            <div class="kpi-content">
+                <div class="kpi-label">Rejected Samples</div>
+                <div class="kpi-value">@Model.RejectedSamples.ToString("N0")</div>
+                <div class="kpi-subtext">@rejectionRate% excluded</div>
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-icon kpi-isolates">
+                <i class="bi bi-virus"></i>
+            </div>
+            <div class="kpi-content">
+                <div class="kpi-label">Total Isolates</div>
+                <div class="kpi-value">@Model.TotalIsolates.ToString("N0")</div>
+                <div class="kpi-subtext">Accepted cohort</div>
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-icon kpi-positive">
+                <i class="bi bi-check-circle"></i>
+            </div>
+            <div class="kpi-content">
+                <div class="kpi-label">Positive Cultures</div>
+                <div class="kpi-value">@Model.PositiveCultures.ToString("N0")</div>
+                <div class="kpi-subtext">@positivityRate% positivity</div>
+            </div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-icon kpi-mdr">
+                <i class="bi bi-shield-exclamation"></i>
+            </div>
+            <div class="kpi-content">
+                <div class="kpi-label">MDR Isolates</div>
+                <div class="kpi-value">@Model.MDRIsolates.ToString("N0")</div>
+                <div class="kpi-subtext">@mdrRate% of isolates</div>
+            </div>
+        </div>
+
+        @if (Model.ShowMRSAKpi)
+        {
+            <div class="kpi-card kpi-card-mrsa">
+                <div class="kpi-icon kpi-mrsa">
+                    <i class="bi bi-virus2"></i>
+                </div>
+                <div class="kpi-content">
+                    <div class="kpi-label">MRSA (S. aureus)</div>
+                    <div class="kpi-value">@Model.MRSAIsolates.ToString("N0")</div>
+                    <div class="kpi-subtext">@Model.MRSAPercentage.ToString("F1")% of @Model.MRSADenominator.ToString("N0") tested</div>
+                </div>
+            </div>
+        }
+
+        <div class="kpi-card">
+            <div class="kpi-icon kpi-genomics">
+                <i class="bi bi-diagram-3"></i>
+            </div>
+            <div class="kpi-content">
+                <div class="kpi-label">Sequenced</div>
+                <div class="kpi-value">@Model.SequencedIsolates.ToString("N0")</div>
+                <div class="kpi-subtext">@wgsRate% WGS linked</div>
+            </div>
+        </div>
+
+    </div>
+
+
+    <!-- ========================================================= -->
+    <!-- OPT-IN STRATIFIED RECRUITMENT COMPARISON (ACTIVE VS PASSIVE) -->
+    <!-- ========================================================= -->
+    @if (Model.IsGroupedByRecruitmentType && Model.RecruitmentStratifiedKpis.Count > 0)
+    {
+        <div class="dashboard-card p-3 mb-3">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                <div>
+                    <h3 class="h6 fw-bold text-dark mb-0">
+                        <i class="bi bi-columns-gap text-primary me-1"></i>
+                        Stratified Surveillance Summary: Active vs. Passive (ISO)
+                    </h3>
+                    <span class="small text-muted">
+                        Side-by-side breakdown across recruitment strategies for the active filter cohort
+                    </span>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0 small">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Recruitment Strategy</th>
+                            <th class="text-end">Accepted Samples</th>
+                            <th class="text-end">Rejected Samples</th>
+                            <th class="text-end">Total Isolates</th>
+                            <th class="text-end">Positive Cultures</th>
+                            <th class="text-end">MDR Isolates</th>
+                            @if (Model.ShowMRSAKpi)
+                            {
+                                <th class="text-end">MRSA (S. aureus)</th>
+                            }
+                            <th class="text-end">WGS Sequenced</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var grp in Model.RecruitmentStratifiedKpis)
+                        {
+                            var grpSubmitted = grp.TotalPatients + grp.RejectedSamples;
+                            var grpAccRate = grpSubmitted > 0 ? (grp.TotalPatients * 100.0 / grpSubmitted).ToString("F1") : "0.0";
+                            var grpPosRate = grp.TotalIsolates > 0 ? (grp.PositiveCultures * 100.0 / grp.TotalIsolates).ToString("F1") : "0.0";
+                            var grpMdrRate = grp.TotalIsolates > 0 ? (grp.MDRIsolates * 100.0 / grp.TotalIsolates).ToString("F1") : "0.0";
+                            var grpWgsRate = grp.TotalIsolates > 0 ? (grp.SequencedIsolates * 100.0 / grp.TotalIsolates).ToString("F1") : "0.0";
+                            var isPassive = string.Equals(grp.RecruitmentType, "Passive", StringComparison.OrdinalIgnoreCase);
+
+                            <tr>
+                                <td class="fw-semibold">
+                                    <span class="badge @(isPassive ? "text-bg-secondary" : "text-bg-primary") me-1">
+                                        @(isPassive ? "Passive (ISO)" : "Active")
+                                    </span>
+                                </td>
+                                <td class="text-end fw-semibold">
+                                    @grp.TotalPatients.ToString("N0")
+                                    <span class="text-muted">(@grpAccRate%)</span>
+                                </td>
+                                <td class="text-end text-danger">
+                                    @grp.RejectedSamples.ToString("N0")
+                                </td>
+                                <td class="text-end fw-semibold">
+                                    @grp.TotalIsolates.ToString("N0")
+                                </td>
+                                <td class="text-end">
+                                    @grp.PositiveCultures.ToString("N0")
+                                    <span class="text-muted">(@grpPosRate%)</span>
+                                </td>
+                                <td class="text-end">
+                                    @grp.MDRIsolates.ToString("N0")
+                                    <span class="text-muted">(@grpMdrRate%)</span>
+                                </td>
+                                @if (Model.ShowMRSAKpi)
+                                {
+                                    <td class="text-end">
+                                        @grp.MRSAIsolates.ToString("N0")
+                                        <span class="text-muted">(@grp.MRSAPercentage.ToString("F1")%)</span>
+                                    </td>
+                                }
+                                <td class="text-end">
+                                    @grp.SequencedIsolates.ToString("N0")
+                                    <span class="text-muted">(@grpWgsRate%)</span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+
+    <!-- ========================================================= -->
+    <!-- ANALYTICAL TABS                                           -->
+    <!-- ========================================================= -->
+
+    <div class="dashboard-tabs-wrapper">
+
+        <ul class="nav nav-tabs dashboard-tabs" id="dashboardTabs" role="tablist">
+
+            <li class="nav-item" role="presentation">
+                <button class="nav-link @(openAstTabOnLoad ? "" : "active")"
+                        id="patient-tab"
+                        data-bs-toggle="tab"
+                        data-bs-target="#patient-panel"
+                        type="button"
+                        role="tab">
+                    <i class="bi bi-person-vcard"></i>
+                    Patient &amp; Metadata
+                </button>
+            </li>
+
+            <li class="nav-item" role="presentation">
+                <button class="nav-link @(openAstTabOnLoad ? "active" : "")"
+                        id="isolate-tab"
+                        data-bs-toggle="tab"
+                        data-bs-target="#isolate-panel"
+                        type="button"
+                        role="tab">
+                    <i class="bi bi-virus2"></i>
+                    Isolate Information &amp; AST
+                </button>
+            </li>
+
+            <li class="nav-item" role="presentation">
+                <button class="nav-link"
+                        id="genomics-tab"
+                        data-bs-toggle="tab"
+                        data-bs-target="#genomics-panel"
+                        type="button"
+                        role="tab">
+                    <i class="bi bi-diagram-3"></i>
+                    Genomics
+                </button>
+            </li>
+
+        </ul>
+
+
+        <div class="tab-content dashboard-tab-content">
+
+
+            <!-- ================================================= -->
+            <!-- PATIENT & METADATA                                -->
+            <!-- ================================================= -->
+
+            <div class="tab-pane fade @(openAstTabOnLoad ? "" : "show active")" id="patient-panel" role="tabpanel">
+
+                <div class="section-intro">
+                    <div>
+                        <h2>Patient &amp; Metadata</h2>
+                        <p>
+                            Demographic and clinical distribution among accepted surveillance patients (n = @Model.TotalPatients.ToString("N0")).
+                        </p>
+                    </div>
+                </div>
+
+                <div class="chart-grid">
+
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3>Sex Distribution</h3>
+                            <p>Accepted patients stratified by biological sex</p>
+                        </div>
+                        <div class="chart-actions">
+                            <button class="btn btn-sm btn-outline-secondary"
+                                    title="Download publication PNG"
+                                    onclick="downloadChart('patientsBySexChart', 'sex-distribution')">
+                                <i class="bi bi-download"></i>
+                            </button>
+                        </div>
+                        <div id="patientsBySexChart" class="plotly-chart chart-pie"></div>
+                    </div>
+
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3>Age Group Distribution</h3>
+                            <p>Accepted patient counts and share across age brackets</p>
+                        </div>
+                        <div class="chart-actions">
+                            <button class="btn btn-sm btn-outline-secondary"
+                                    title="Download publication PNG"
+                                    onclick="downloadChart('patientsByAgeGroupChart', 'age-groups')">
+                                <i class="bi bi-download"></i>
+                            </button>
+                        </div>
+                        <div id="patientsByAgeGroupChart" class="plotly-chart"></div>
+                    </div>
+
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3>Military / Civilian Status</h3>
+                            <p>Population classification among accepted patients</p>
+                        </div>
+                        <div class="chart-actions">
+                            <button class="btn btn-sm btn-outline-secondary"
+                                    title="Download publication PNG"
+                                    onclick="downloadChart('militaryCivilianChart', 'military-civilian-status')">
+                                <i class="bi bi-download"></i>
+                            </button>
+                        </div>
+                        <div id="militaryCivilianChart" class="plotly-chart chart-pie"></div>
+                    </div>
+
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3>Patient Care Setting</h3>
+                            <p>Inpatient vs. outpatient distribution (accepted cohort)</p>
+                        </div>
+                        <div class="chart-actions">
+                            <button class="btn btn-sm btn-outline-secondary"
+                                    title="Download publication PNG"
+                                    onclick="downloadChart('patientTypeChart', 'patient-type')">
+                                <i class="bi bi-download"></i>
+                            </button>
+                        </div>
+                        <div id="patientTypeChart" class="plotly-chart chart-pie"></div>
+                    </div>
+
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3>Infection Acquisition (HAI / CAI)</h3>
+                            <p>Healthcare-associated vs. community-associated infections</p>
+                        </div>
+                        <div class="chart-actions">
+                            <button class="btn btn-sm btn-outline-secondary"
+                                    title="Download publication PNG"
+                                    onclick="downloadChart('haiCaiChart', 'hai-cai-classification')">
+                                <i class="bi bi-download"></i>
+                            </button>
+                        </div>
+                        <div id="haiCaiChart" class="plotly-chart chart-pie"></div>
+                    </div>
+
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3>Clinical Presentation</h3>
+                            <p>Ranked clinical syndromes at enrollment (accepted patients)</p>
+                        </div>
+                        <div class="chart-actions">
+                            <button class="btn btn-sm btn-outline-secondary"
+                                    title="Download publication PNG"
+                                    onclick="downloadChart('clinicalPresentationChart', 'clinical-presentation')">
+                                <i class="bi bi-download"></i>
+                            </button>
+                        </div>
+                        <div id="clinicalPresentationChart" class="plotly-chart chart-large"></div>
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- ================================================= -->
+            <!-- ISOLATE INFORMATION & AST                         -->
+            <!-- ================================================= -->
+
+            <div class="tab-pane fade @(openAstTabOnLoad ? "show active" : "")" id="isolate-panel" role="tabpanel">
+
+                <div class="section-intro">
+                    <div>
+                        <h2>Isolate Information &amp; AST</h2>
+                        <p>
+                            Microbiological recovery, cumulative antibiograms, and temporal resistance trajectories for accepted samples.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="chart-grid">
+
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3>Organism Distribution</h3>
+                            <p>Ranked frequency of recovered bacterial species</p>
+                        </div>
+                        <div class="chart-actions">
+                            <button class="btn btn-sm btn-outline-secondary"
+                                    title="Download publication PNG"
+                                    onclick="downloadChart('organismDistributionChart', 'organism-distribution')">
+                                <i class="bi bi-download"></i>
+                            </button>
+                        </div>
+                        <div id="organismDistributionChart" class="plotly-chart chart-large"></div>
+                    </div>
+
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3>Culture Outcomes</h3>
+                            <p>Proportion of positive, negative, and contaminated cultures</p>
+                        </div>
+                        <div class="chart-actions">
+                            <button class="btn btn-sm btn-outline-secondary"
+                                    title="Download publication PNG"
+                                    onclick="downloadChart('cultureResultsChart', 'culture-results')">
+                                <i class="bi bi-download"></i>
+                            </button>
+                        </div>
+                        <div id="cultureResultsChart" class="plotly-chart chart-pie"></div>
+                    </div>
+
+                </div>
+
+                <!-- AST ANALYSIS & LONGITUDINAL RESISTANCE TRENDS -->
+
+                <div class="dashboard-card ast-analysis-card">
+
+                    <div class="ast-header">
+                        <div>
+                            <h3>Cumulative Antibiogram &amp; AST Profile</h3>
+                            <p>
+                                Select one or more target organisms to inspect pooled S / I / R distributions and longitudinal resistance trends across tested antimicrobial agents (accepted samples only).
+                            </p>
+                        </div>
+                    </div>
+
+                    <form asp-action="Index" method="get" class="ast-filter-form">
+
+                        <input type="hidden" asp-for="StartDate" />
+                        <input type="hidden" asp-for="EndDate" />
+                        <input type="hidden" asp-for="RecruitmentType" />
+                        <input type="hidden" asp-for="GroupByRecruitmentType" />
+                        <input type="hidden" asp-for="FacilityOwnership" />
+
+                        @foreach (var facilityId in Model.FacilityIDs)
+                        {
+                            <input type="hidden" name="FacilityIDs" value="@facilityId" />
+                        }
+
+                        @foreach (var organismId in Model.OrganismIDs)
+                        {
+                            <input type="hidden" name="OrganismIDs" value="@organismId" />
+                        }
+
+                        <div class="row g-3 align-items-end">
+
+                            <div class="col-12 col-md-8 col-lg-6">
+                                <label class="form-label">
+                                    Organism(s) for AST Analysis
+                                </label>
+                                <div class="dropdown multi-check-dropdown" data-placeholder="Select one or more organisms" data-item-label="organism" data-items-label="organisms">
+                                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center multi-check-toggle"
+                                            type="button"
+                                            data-bs-toggle="dropdown"
+                                            data-bs-auto-close="outside"
+                                            aria-expanded="false">
+                                        <span class="multi-check-summary text-truncate">Select one or more organisms</span>
+                                    </button>
+                                    <div class="dropdown-menu w-100 p-2 shadow-sm multi-check-menu">
+                                        <input type="text"
+                                               class="form-control form-control-sm mb-2 multi-check-search"
+                                               placeholder="Search organisms..."
+                                               autocomplete="off" />
+                                        <div class="d-flex justify-content-between align-items-center mb-1 pb-1 border-bottom small">
+                                            <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none multi-check-all">Select all</button>
+                                            <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none text-danger multi-check-clear">Clear</button>
+                                        </div>
+                                        <div class="multi-check-list">
+                                            @foreach (var organism in Model.Organisms)
+                                            {
+                                                var isChecked = selectedAstOrganismSet.Contains(organism.Value);
+                                                var checkId = $"ast_org_{organism.Value}";
+                                                <div class="form-check multi-check-item" data-search-text="@organism.Text.ToLowerInvariant()">
+                                                    <input class="form-check-input multi-check-input"
+                                                           type="checkbox"
+                                                           name="ASTOrganismIDs"
+                                                           value="@organism.Value"
+                                                           id="@checkId"
+                                                           checked="@isChecked" />
+                                                    <label class="form-check-label small" for="@checkId">
+                                                        @organism.Text
+                                                    </label>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-auto">
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-search me-1"></i>
+                                    Analyse AST
+                                </button>
+                            </div>
+
+                        </div>
+
+                    </form>
+
+                    @if (!Model.HasASTOrganismSelection)
+                    {
+                        <div class="empty-analysis-state">
+                            <i class="bi bi-bar-chart"></i>
+                            <h4>Select one or more organisms for detailed AST analysis</h4>
+                            <p>
+                                Displays a CLSI-style cumulative antibiogram (% Susceptible / Intermediate / Resistant) or small-sample summary for accepted isolates.
+                            </p>
+                        </div>
+                    }
+                    else if (Model.ASTOrganismIsolateCount == 0)
+                    {
+                        <div class="empty-analysis-state">
+                            <i class="bi bi-database-x"></i>
+                            <h4>No AST data available</h4>
+                            <p>
+                                No accepted isolates matching the current filters have usable AST results for the selected organism(s).
+                            </p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="ast-summary">
+                            <span class="ast-count-badge">
+                                <i class="bi bi-virus2"></i>
+                                @Model.ASTOrganismDisplayTitle — @Model.ASTOrganismIsolateCount.ToString("N0") accepted isolate(s)
+                            </span>
+
+                            @if (Model.UseAntibiogram)
+                            {
+                                <span class="ast-method-badge">
+                                    <i class="bi bi-bar-chart-steps"></i>
+                                    Cumulative Antibiogram (n &ge; 30)
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="ast-method-badge">
+                                    <i class="bi bi-grid-3x3-gap"></i>
+                                    Small-sample AST summary (n &lt; 30 — interpret with caution)
+                                </span>
+                            }
+
+                            @if (Model.IsMultiOrganismAST)
+                            {
+                                <span class="ast-pooled-badge" title="Multiple species are combined; interpret drugs affected by intrinsic resistance carefully">
+                                    <i class="bi bi-layers"></i>
+                                    Pooled Multi-Organism View (@Model.ASTOrganismIDs.Count species)
+                                </span>
+                            }
+                        </div>
+
+                        <div class="ast-toolbar">
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <div class="input-group input-group-sm" style="width: 240px;">
+                                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                                    <input type="text"
+                                           id="antibiogramSearchInput"
+                                           class="form-control"
+                                           placeholder="Filter antibiotic..."
+                                           autocomplete="off" />
+                                </div>
+
+                                <select id="antibiogramSortSelect" class="form-select form-select-sm" style="width: 220px;">
+                                    <option value="default">Sort: Panel Order</option>
+                                    <option value="resistant-desc">Sort: Highest % Resistant</option>
+                                    <option value="susceptible-desc">Sort: Highest % Susceptible</option>
+                                    <option value="tested-desc">Sort: Most Tested (n)</option>
+                                    <option value="alpha-asc">Sort: Alphabetical (A–Z)</option>
+                                </select>
+                            </div>
+
+                            <button class="btn btn-sm btn-outline-secondary"
+                                    onclick="downloadChart('antibiogramChart', 'antibiogram')">
+                                <i class="bi bi-download me-1"></i>
+                                Download Publication PNG
+                            </button>
+                        </div>
+
+                        <div id="antibiogramChart" class="plotly-chart antibiogram-chart"></div>
+
+                        @if (Model.Antibiogram.Any())
+                        {
+                            <div class="table-responsive antibiogram-table-wrapper">
+                                <table class="table table-hover align-middle antibiogram-table-enhanced" id="antibiogramTable">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Antibiotic</th>
+                                            <th class="text-end">Tested (n)</th>
+                                            <th class="text-end">Susceptible (S)</th>
+                                            <th class="text-end">Intermediate (I)</th>
+                                            <th class="text-end">Resistant (R)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="antibiogramTableBody">
+                                        @foreach (var item in Model.Antibiogram)
+                                        {
+                                            <tr>
+                                                <td class="abx-cell-name">
+                                                    @item.AntibioticName
+                                                    <span class="abx-code-tag">@item.AntibioticCode</span>
+                                                </td>
+                                                <td class="text-end fw-semibold">@item.Tested.ToString("N0")</td>
+                                                <td class="text-end">
+                                                    <span class="sir-badge sir-badge-s">
+                                                        @item.Susceptible.ToString("N0") (@item.SusceptiblePercentage.ToString("F1")%)
+                                                    </span>
+                                                </td>
+                                                <td class="text-end">
+                                                    <span class="sir-badge sir-badge-i">
+                                                        @item.Intermediate.ToString("N0") (@item.IntermediatePercentage.ToString("F1")%)
+                                                    </span>
+                                                </td>
+                                                <td class="text-end">
+                                                    <span class="sir-badge sir-badge-r">
+                                                        @item.Resistant.ToString("N0") (@item.ResistantPercentage.ToString("F1")%)
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    }
+
+                    <!-- ================================================= -->
+                    <!-- INTERACTIVE ANTIBIOTIC RESISTANCE TRENDS (ALWAYS VISIBLE) -->
+                    <!-- ================================================= -->
+                    <div class="ast-trends-section">
+                        <div class="ast-trends-header">
+                            <div>
+                                <h4>
+                                    <i class="bi bi-graph-up-arrow me-1 text-primary"></i>
+                                    Antibiotic Resistance Trends (% Resistant Over Time)
+                                    <span class="badge rounded-pill text-bg-light border text-secondary ms-1 fw-normal">
+                                        @(Model.HasASTOrganismSelection? Model.ASTOrganismDisplayTitle: "All Accepted Isolates")
+                                    </span>
+                                    @if (Model.IsGroupedByRecruitmentType)
+                                    {
+                                        <span class="badge rounded-pill text-bg-info text-dark ms-1 fw-normal">
+                                            Active (solid) vs. Passive (dashed)
+                                        </span>
+                                    }
+                                </h4>
+                                <p>
+                                    Choose antibiotics, switch reporting intervals (Monthly, Quarterly, Semi-Annual, Yearly), and toggle linear regression trendlines.
+                                </p>
+                            </div>
+
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <div class="btn-group btn-group-sm" role="group" aria-label="Trend Granularity">
+                                    <input type="radio" class="btn-check" name="trendGranularity" id="granMonth" value="month" checked>
+                                    <label class="btn btn-outline-primary" for="granMonth">Monthly</label>
+
+                                    <input type="radio" class="btn-check" name="trendGranularity" id="granQuarter" value="quarter">
+                                    <label class="btn btn-outline-primary" for="granQuarter">Quarterly</label>
+
+                                    <input type="radio" class="btn-check" name="trendGranularity" id="granSemiAnnual" value="semiannual">
+                                    <label class="btn btn-outline-primary" for="granSemiAnnual">Semi-Annual</label>
+
+                                    <input type="radio" class="btn-check" name="trendGranularity" id="granYear" value="year">
+                                    <label class="btn btn-outline-primary" for="granYear">Yearly</label>
+                                </div>
+
+                                <button type="button"
+                                        id="btnToggleTrendline"
+                                        class="btn btn-sm btn-outline-dark"
+                                        aria-pressed="false">
+                                    <i class="bi bi-slash-lg me-1"></i>
+                                    <span>Add Trendline</span>
+                                </button>
+
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-secondary"
+                                        onclick="downloadChart('resistanceTrendsChart', 'resistance-trends')">
+                                    <i class="bi bi-download me-1"></i>
+                                    PNG
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="row g-2 align-items-end mb-2">
+                            <div class="col-12 col-md-7 col-lg-5">
+                                <label class="form-label small fw-semibold text-secondary mb-1">
+                                    Select Antibiotics to Plot
+                                </label>
+                                <div class="dropdown multi-check-dropdown"
+                                     id="trendAntibioticDropdown"
+                                     data-placeholder="Select antibiotics"
+                                     data-item-label="antibiotic"
+                                     data-items-label="antibiotics">
+                                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center multi-check-toggle"
+                                            type="button"
+                                            data-bs-toggle="dropdown"
+                                            data-bs-auto-close="outside"
+                                            aria-expanded="false">
+                                        <span class="multi-check-summary text-truncate">Select antibiotics</span>
+                                    </button>
+                                    <div class="dropdown-menu w-100 p-2 shadow-sm multi-check-menu">
+                                        <input type="text"
+                                               class="form-control form-control-sm mb-2 multi-check-search"
+                                               placeholder="Search antibiotics..."
+                                               autocomplete="off" />
+                                        <div class="d-flex justify-content-between align-items-center mb-1 pb-1 border-bottom small">
+                                            <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none multi-check-all">Select all</button>
+                                            <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none text-danger multi-check-clear">Clear</button>
+                                        </div>
+                                        <div class="multi-check-list" id="trendAntibioticCheckList"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-5 col-lg-7">
+                                <div id="trendSlopeSummary" class="small text-muted"></div>
+                            </div>
+                        </div>
+
+                        <div id="resistanceTrendsChart" class="plotly-chart chart-large"></div>
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- ================================================= -->
+            <!-- GENOMICS                                          -->
+            <!-- ================================================= -->
+
+            <div class="tab-pane fade" id="genomics-panel" role="tabpanel">
+
+                <div class="section-intro">
+                    <div>
+                        <h2>Genomic Surveillance</h2>
+                        <p>
+                            Whole-genome sequencing throughput, assembly quality, sequence types, and AMR/virulence gene prevalence (accepted samples).
+                        </p>
+                    </div>
+                    <span class="genomic-filter-status" id="genomicFilterStatus"></span>
+                </div>
+
+                <div class="chart-grid">
+
+                    <div class="chart-card chart-card-wide">
+                        <div class="chart-header">
+                            <h3>Sequencing Throughput Over Time</h3>
+                            <p>Monthly/periodic sequenced isolates with cumulative trajectory</p>
+                        </div>
+                        <div class="chart-actions">
+                            <button class="btn btn-sm btn-outline-secondary"
+                                    title="Download publication PNG"
+                                    onclick="downloadChart('sequencingOverTimeChart', 'sequencing-over-time')">
+                                <i class="bi bi-download"></i>
+                            </button>
+                        </div>
+                        <div id="sequencingOverTimeChart" class="plotly-chart chart-large"></div>
+                    </div>
+
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3>Genome Assembly Completeness</h3>
+                            <p>Quality tiers across sequenced isolates</p>
+                        </div>
+                        <div class="chart-actions">
+                            <button class="btn btn-sm btn-outline-secondary"
+                                    title="Download publication PNG"
+                                    onclick="downloadChart('genomeCompletenessChart', 'genome-completeness')">
+                                <i class="bi bi-download"></i>
+                            </button>
+                        </div>
+                        <div id="genomeCompletenessChart" class="plotly-chart"></div>
+                    </div>
+
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3>Sequence / Strain Type Distribution</h3>
+                            <p>Dominant MLST / clonal lineages among sequenced isolates</p>
+                        </div>
+                        <div class="chart-actions">
+                            <button class="btn btn-sm btn-outline-secondary"
+                                    title="Download publication PNG"
+                                    onclick="downloadChart('strainTypesChart', 'strain-types')">
+                                <i class="bi bi-download"></i>
+                            </button>
+                        </div>
+                        <div id="strainTypesChart" class="plotly-chart chart-large"></div>
+                    </div>
+
+                    <div class="chart-card chart-card-wide">
+                        <div class="chart-header">
+                            <h3>AMR &amp; Virulence Gene Prevalence</h3>
+                            <p>Most frequently detected genetic determinants among sequenced isolates</p>
+                        </div>
+                        <div class="chart-actions">
+                            <button class="btn btn-sm btn-outline-secondary"
+                                    title="Download publication PNG"
+                                    onclick="downloadChart('genePrevalenceChart', 'gene-prevalence')">
+                                <i class="bi bi-download"></i>
+                            </button>
+                        </div>
+                        <div id="genePrevalenceChart" class="plotly-chart chart-large"></div>
+                    </div>
+
+                    <div class="chart-card chart-card-wide">
+                        <div class="chart-header">
+                            <h3>Genomic Virulence &amp; Resistance Scores</h3>
+                            <p>Summary distribution of composite genomic scores</p>
+                        </div>
+                        <div class="chart-actions">
+                            <button class="btn btn-sm btn-outline-secondary"
+                                    title="Download publication PNG"
+                                    onclick="downloadChart('genomicScoresChart', 'genomic-scores')">
+                                <i class="bi bi-download"></i>
+                            </button>
+                        </div>
+                        <div id="genomicScoresChart" class="plotly-chart"></div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+@section Scripts {
+
+    <!-- Serialized Dashboard Payload (Zero JS Parser Warnings) -->
+    <script id="amr-dashboard-data" type="application/json">
+        @Html.Raw(JsonSerializer.Serialize(new
+        {
+                        patientsBySex = Model.PatientsBySex,
+                                        patientsByAgeGroup = Model.PatientsByAgeGroup,
+                                        militaryCivilian = Model.PatientsByMilitaryCivilianStatus,
+                                        patientType = Model.PatientsByPatientType,
+                                        haiCai = Model.PatientsByHAICAI,
+                                        clinicalPresentation = Model.PatientsByClinicalPresentation,
+                                        isolatesByOrganism = Model.IsolatesByOrganism,
+                                        cultureResults = Model.CultureResults,
+                                        antibioticSusceptibility = Model.AntibioticSusceptibility,
+                                        antibiogram = Model.Antibiogram,
+                                        antibioticTrendObservations = Model.AntibioticTrendObservations,
+                                        isGroupedByRecruitmentType = Model.IsGroupedByRecruitmentType,
+                                        sequencingOverTime = Model.SequencingOverTime,
+                                        genomeCompleteness = Model.GenomeCompleteness,
+                                        strainTypes = Model.StrainTypesData,
+                                        genePrevalence = Model.GenePrevalence,
+                                        genomicScores = Model.GenomicScores,
+                                        genomicFilterCount = genomicFilterCount
+        }, jsonOptions))
+</script>
+
+<!-- Plotly -->
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+<script>
+
+    // =========================================================
+    // LIVE DASHBOARD DATA
+    // =========================================================
+
+    const dashboardDataEl = document.getElementById("amr-dashboard-data");
+    const dashboardData = dashboardDataEl ? JSON.parse(dashboardDataEl.textContent || "{}") : {};
+
+    const patientsBySex = dashboardData.patientsBySex || [];
+    const patientsByAgeGroup = dashboardData.patientsByAgeGroup || [];
+    const militaryCivilian = dashboardData.militaryCivilian || [];
+    const patientType = dashboardData.patientType || [];
+    const haiCai = dashboardData.haiCai || [];
+    const clinicalPresentation = dashboardData.clinicalPresentation || [];
+
+    const isolatesByOrganism = dashboardData.isolatesByOrganism || [];
+    const cultureResults = dashboardData.cultureResults || [];
+    const antibioticSusceptibility = dashboardData.antibioticSusceptibility || [];
+    const antibiogram = dashboardData.antibiogram || [];
+    const antibioticTrendObservations = dashboardData.antibioticTrendObservations || [];
+    const isGroupedByRecruitmentType = Boolean(dashboardData.isGroupedByRecruitmentType);
+
+    const sequencingOverTime = dashboardData.sequencingOverTime || [];
+    const genomeCompleteness = dashboardData.genomeCompleteness || [];
+    const strainTypes = dashboardData.strainTypes || [];
+    const genePrevalence = dashboardData.genePrevalence || [];
+    const genomicScores = dashboardData.genomicScores || [];
+
+    const genomicFilterCount = Number(dashboardData.genomicFilterCount) || 0;
+
+
+    // =========================================================
+    // RECRUITMENT FILTER / GROUP-BY SWITCH INTERACTION
+    // =========================================================
+
+    function initRecruitmentControls() {
+        const recruitmentSelect = document.getElementById("recruitmentTypeSelect");
+        const groupSwitch = document.getElementById("groupByRecruitmentSwitch");
+        if (!recruitmentSelect || !groupSwitch) return;
+
+        function syncSwitchState() {
+            const hasSingleRecruitment = Boolean(recruitmentSelect.value && recruitmentSelect.value.trim() !== "");
+            if (hasSingleRecruitment) {
+                groupSwitch.checked = false;
+                groupSwitch.disabled = true;
+            } else {
+                groupSwitch.disabled = false;
+            }
+        }
+
+        recruitmentSelect.addEventListener("change", syncSwitchState);
+        syncSwitchState();
+    }
+
+
+    // =========================================================
+    // MULTI-CHECKBOX DROPDOWN INITIALIZATION
+    // =========================================================
+
+    function bindMultiCheckDropdown(dropdown) {
+        if (!dropdown) return;
+
+        const placeholder = dropdown.dataset.placeholder || "Select options";
+        const itemLabel = dropdown.dataset.itemLabel || "item";
+        const itemsLabel = dropdown.dataset.itemsLabel || "items";
+        const summaryEl = dropdown.querySelector(".multi-check-summary");
+        const searchInput = dropdown.querySelector(".multi-check-search");
+        const selectAllBtn = dropdown.querySelector(".multi-check-all");
+        const clearBtn = dropdown.querySelector(".multi-check-clear");
+        const items = Array.from(dropdown.querySelectorAll(".multi-check-item"));
+        const checkboxes = Array.from(dropdown.querySelectorAll(".multi-check-input"));
+
+        function updateSummary() {
+            const checkedBoxes = checkboxes.filter(cb => cb.checked);
+            if (checkedBoxes.length === 0) {
+                summaryEl.textContent = placeholder;
+                summaryEl.classList.remove("fw-semibold", "text-primary");
+            } else if (checkedBoxes.length === 1) {
+                const label = checkedBoxes[0].closest(".multi-check-item").querySelector("label");
+                summaryEl.textContent = label ? label.textContent.trim() : `1 ${itemLabel} selected`;
+                summaryEl.classList.add("fw-semibold", "text-primary");
+            } else {
+                summaryEl.textContent = `${checkedBoxes.length} ${itemsLabel} selected`;
+                summaryEl.classList.add("fw-semibold", "text-primary");
+            }
+        }
+
+        checkboxes.forEach(cb => cb.addEventListener("change", () => {
+            updateSummary();
+            dropdown.dispatchEvent(new CustomEvent("multicheck:change"));
+        }));
+
+        if (searchInput) {
+            searchInput.addEventListener("input", function () {
+                const term = this.value.trim().toLowerCase();
+                items.forEach(item => {
+                    const text = item.dataset.searchText || "";
+                    item.style.display = text.includes(term) ? "" : "none";
+                });
+            });
+        }
+
+        if (selectAllBtn) {
+            selectAllBtn.addEventListener("click", function () {
+                items.forEach(item => {
+                    if (item.style.display !== "none") {
+                        const cb = item.querySelector(".multi-check-input");
+                        if (cb) cb.checked = true;
+                    }
+                });
+                updateSummary();
+                dropdown.dispatchEvent(new CustomEvent("multicheck:change"));
+            });
+        }
+
+        if (clearBtn) {
+            clearBtn.addEventListener("click", function () {
+                checkboxes.forEach(cb => { cb.checked = false; });
+                updateSummary();
+                dropdown.dispatchEvent(new CustomEvent("multicheck:change"));
+            });
+        }
+
+        updateSummary();
+    }
+
+    function initMultiCheckDropdowns() {
+        document.querySelectorAll(".multi-check-dropdown").forEach(dropdown => {
+            if (dropdown.id !== "trendAntibioticDropdown") {
+                bindMultiCheckDropdown(dropdown);
+            }
+        });
+    }
+
+
+    // =========================================================
+    // PUBLICATION PALETTE (Okabe-Ito Colorblind-Safe)
+    // =========================================================
+
+    const pubPalette = [
+        "#0072B2", // Blue
+        "#009E73", // Bluish Green
+        "#D55E00", // Vermillion
+        "#CC79A7", // Reddish Purple
+        "#E69F00", // Orange
+        "#56B4E9", // Sky Blue
+        "#332288", // Indigo
+        "#882255", // Wine
+        "#117733", // Forest Green
+        "#44AA99"  // Teal
+    ];
+
+    const primaryBarColor = "#0072B2";
+
+
+    // =========================================================
+    // COMMON HELPERS
+    // =========================================================
+
+    function getLabels(data) {
+        return Array.isArray(data)
+            ? data.map(item => item.label ?? "Unspecified")
+            : [];
+    }
+
+    function getValues(data) {
+        return Array.isArray(data)
+            ? data.map(item => Number(item.value) || 0)
+            : [];
+    }
+
+    function hasData(data) {
+        return Array.isArray(data) &&
+            data.length > 0 &&
+            data.some(item => Number(item.value) > 0);
+    }
+
+    function formatCountAndPercent(value, total) {
+        if (!total || total <= 0) {
+            return value.toLocaleString();
+        }
+        const pct = ((value / total) * 100).toFixed(1);
+        return `${value.toLocaleString()} (${pct}%)`;
+    }
+
+    function getPublicationLayout() {
+        return {
+            margin: { l: 60, r: 30, t: 24, b: 60 },
+            paper_bgcolor: "#ffffff",
+            plot_bgcolor: "#ffffff",
+            font: {
+                family: "Inter, 'Segoe UI', Arial, sans-serif",
+                size: 12,
+                color: "#1e293b"
+            },
+            hoverlabel: {
+                bgcolor: "#ffffff",
+                bordercolor: "#cbd5e1",
+                font: {
+                    family: "Inter, 'Segoe UI', Arial, sans-serif",
+                    size: 12,
+                    color: "#0f172a"
+                }
+            }
+        };
+    }
+
+    function showNoData(elementId, customMessage) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+
+        Plotly.newPlot(
+            elementId,
+            [],
+            {
+                ...getPublicationLayout(),
+                annotations: [{
+                    text: customMessage || "No accepted sample records available for this view",
+                    showarrow: false,
+                    font: { size: 13.5, color: "#64748b" }
+                }],
+                xaxis: { visible: false },
+                yaxis: { visible: false }
+            },
+            { responsive: true, displayModeBar: false }
+        );
+    }
+
+
+    // =========================================================
+    // PUBLICATION-QUALITY PNG EXPORT
+    // =========================================================
+
+    async function downloadChart(elementId, fileName) {
+        const chart = document.getElementById(elementId);
+        if (!chart || !chart.data || chart.data.length === 0) return;
+
+        const card = chart.closest(".chart-card, .ast-trends-section, .ast-analysis-card");
+        const titleEl = card ? card.querySelector("h3, h4") : null;
+        const subtitleEl = card ? card.querySelector(".chart-header p, .ast-trends-header p, .ast-header p") : null;
+
+        const titleText = titleEl ? titleEl.textContent.trim() : fileName;
+        const subtitleText = subtitleEl ? subtitleEl.textContent.trim() : "";
+
+        const originalTitle = chart.layout.title;
+        const originalMargin = { ...chart.layout.margin };
+        const originalAnnotations = [...(chart.layout.annotations || [])];
+
+        const exportAnnotations = [
+            ...originalAnnotations,
+            {
+                text: "Source: AMR Surveillance System • Accepted Samples Only",
+                xref: "paper",
+                yref: "paper",
+                x: 0,
+                y: -0.18,
+                xanchor: "left",
+                yanchor: "top",
+                showarrow: false,
+                font: { size: 11, color: "#64748b" }
+            }
+        ];
+
+        await Plotly.relayout(chart, {
+            title: {
+                text: subtitleText
+                    ? `<b>${titleText}</b><br><span style="font-size:12px;color:#475569">${subtitleText}</span>`
+                    : `<b>${titleText}</b>`,
+                x: 0.02,
+                xanchor: "left",
+                font: { size: 16, color: "#0f172a" }
+            },
+            margin: {
+                ...originalMargin,
+                t: Math.max((originalMargin.t || 24) + 52, 76),
+                b: Math.max((originalMargin.b || 60) + 28, 88)
+            },
+            annotations: exportAnnotations
+        });
+
+        await Plotly.downloadImage(chart, {
+            format: "png",
+            filename: `${fileName}-accepted`,
+            width: 1800,
+            height: 1100,
+            scale: 3
+        });
+
+        await Plotly.relayout(chart, {
+            title: originalTitle || null,
+            margin: originalMargin,
+            annotations: originalAnnotations
+        });
+    }
+
+
+    // =========================================================
+    // DONUT CHART
+    // =========================================================
+
+    function createDonutChart(elementId, data) {
+        if (!hasData(data)) {
+            showNoData(elementId);
+            return;
+        }
+
+        const values = getValues(data);
+        const labels = getLabels(data);
+        const total = values.reduce((sum, v) => sum + v, 0);
+        const customText = values.map(v => formatCountAndPercent(v, total));
+
+        const trace = {
+            type: "pie",
+            hole: 0.54,
+            labels: labels,
+            values: values,
+            text: customText,
+            textinfo: "percent",
+            textposition: "inside",
+            insidetextorientation: "horizontal",
+            textfont: {
+                size: 12,
+                color: "#ffffff",
+                family: "Inter, 'Segoe UI', Arial, sans-serif"
+            },
+            marker: {
+                colors: pubPalette,
+                line: { color: "#ffffff", width: 2 }
+            },
+            hovertemplate: "<b>%{label}</b><br>Count: %{value:,}<br>Share: %{percent}<extra></extra>"
+        };
+
+        const layout = {
+            ...getPublicationLayout(),
+            margin: { l: 15, r: 15, t: 15, b: 55 },
+            showlegend: true,
+            legend: {
+                orientation: "h",
+                x: 0.5,
+                xanchor: "center",
+                y: -0.05,
+                yanchor: "top",
+                font: { size: 11, color: "#334155" }
+            },
+            annotations: [{
+                text: `<b>n = ${total.toLocaleString()}</b><br><span style="font-size:11px;color:#64748b">Accepted</span>`,
+                x: 0.5,
+                y: 0.5,
+                showarrow: false,
+                font: { size: 14, color: "#0f172a" }
+            }]
+        };
+
+        Plotly.newPlot(elementId, [trace], layout, { responsive: true, displayModeBar: false });
+    }
+
+
+    // =========================================================
+    // BAR CHART
+    // =========================================================
+
+    function createBarChart(elementId, data, options = {}) {
+        const {
+            horizontal = false,
+            sortDescending = false,
+            xAxisTitle = "",
+            yAxisTitle = "",
+            showPercent = true,
+            barColor = primaryBarColor
+        } = options;
+
+        if (!hasData(data)) {
+            showNoData(elementId);
+            return;
+        }
+
+        let chartData = [...data];
+        if (sortDescending) {
+            chartData.sort((a, b) => (Number(b.value) || 0) - (Number(a.value) || 0));
+        }
+
+        const labels = getLabels(chartData);
+        const values = getValues(chartData);
+        const total = values.reduce((sum, v) => sum + v, 0);
+        const maxVal = Math.max(...values, 1);
+
+        const annotationsText = values.map(v =>
+            showPercent ? formatCountAndPercent(v, total) : v.toLocaleString()
+        );
+
+        const trace = {
+            type: "bar",
+            x: horizontal ? values : labels,
+            y: horizontal ? labels : values,
+            orientation: horizontal ? "h" : "v",
+            width: horizontal ? 0.68 : 0.62,
+            marker: {
+                color: barColor,
+                line: { color: "#005a8d", width: 0.5 }
+            },
+            text: annotationsText,
+            textposition: "outside",
+            cliponaxis: false,
+            textfont: {
+                size: 11,
+                color: "#1e293b",
+                family: "Inter, 'Segoe UI', Arial, sans-serif"
+            },
+            hovertemplate: horizontal
+                ? "<b>%{y}</b><br>%{text}<extra></extra>"
+                : "<b>%{x}</b><br>%{text}<extra></extra>"
+        };
+
+        const axisFrameStyle = {
+            showline: true,
+            linecolor: "#94a3b8",
+            linewidth: 1,
+            ticks: "outside",
+            tickcolor: "#94a3b8",
+            tickfont: { size: 11, color: "#334155" }
+        };
+
+        const layout = {
+            ...getPublicationLayout(),
+            margin: horizontal
+                ? { l: 10, r: 85, t: 18, b: 48 }
+                : { l: 55, r: 20, t: 28, b: 68 },
+            xaxis: horizontal
+                ? {
+                    ...axisFrameStyle,
+                    title: { text: xAxisTitle || "Number of Records (n)", font: { size: 11, color: "#475569" } },
+                    range: [0, maxVal * 1.24],
+                    gridcolor: "#f1f5f9",
+                    zeroline: false
+                }
+                : {
+                    ...axisFrameStyle,
+                    title: { text: xAxisTitle, font: { size: 11, color: "#475569" } },
+                    tickangle: labels.length > 6 ? -30 : 0,
+                    showgrid: false
+                },
+            yaxis: horizontal
+                ? {
+                    ...axisFrameStyle,
+                    title: { text: yAxisTitle, font: { size: 11, color: "#475569" } },
+                    autorange: sortDescending ? "reversed" : true,
+                    automargin: true,
+                    showgrid: false
+                }
+                : {
+                    ...axisFrameStyle,
+                    title: { text: yAxisTitle || "Number of Records (n)", font: { size: 11, color: "#475569" } },
+                    range: [0, maxVal * 1.18],
+                    gridcolor: "#f1f5f9",
+                    zeroline: false
+                },
+            showlegend: false
+        };
+
+        Plotly.newPlot(elementId, [trace], layout, { responsive: true, displayModeBar: false });
+    }
+
+
+    // =========================================================
+    // LINE CHART
+    // =========================================================
+
+    function createLineChart(elementId, data) {
+        if (!hasData(data)) {
+            showNoData(elementId);
+            return;
+        }
+
+        const labels = getLabels(data);
+        const values = getValues(data);
+        const maxVal = Math.max(...values, 1);
+
+        const trace = {
+            type: "scatter",
+            mode: labels.length <= 18 ? "lines+markers+text" : "lines+markers",
+            x: labels,
+            y: values,
+            text: values.map(v => v.toLocaleString()),
+            textposition: "top center",
+            textfont: { size: 11, color: "#0f172a" },
+            line: { color: "#0072B2", width: 2.5 },
+            marker: { color: "#0072B2", size: 7, line: { color: "#ffffff", width: 1.5 } },
+            fill: "tozeroy",
+            fillcolor: "rgba(0, 114, 178, 0.08)",
+            hovertemplate: "<b>%{x}</b><br>Sequenced Isolates: %{y:,}<extra></extra>"
+        };
+
+        const layout = {
+            ...getPublicationLayout(),
+            margin: { l: 60, r: 25, t: 28, b: 55 },
+            xaxis: {
+                showline: true,
+                linecolor: "#94a3b8",
+                ticks: "outside",
+                tickcolor: "#94a3b8",
+                showgrid: false
+            },
+            yaxis: {
+                showline: true,
+                linecolor: "#94a3b8",
+                ticks: "outside",
+                tickcolor: "#94a3b8",
+                title: { text: "Sequenced Isolates (n)", font: { size: 11, color: "#475569" } },
+                range: [0, maxVal * 1.18],
+                gridcolor: "#f1f5f9",
+                zeroline: false
+            },
+            showlegend: false
+        };
+
+        Plotly.newPlot(elementId, [trace], layout, { responsive: true, displayModeBar: false });
+    }
+
+
+    // =========================================================
+    // ANTIBIOGRAM (Interactive Sort/Filter + Stacked Bar + Table)
+    // =========================================================
+
+    function getFilteredAndSortedAntibiogram() {
+        if (!Array.isArray(antibiogram)) return [];
+
+        const searchInput = document.getElementById("antibiogramSearchInput");
+        const sortSelect = document.getElementById("antibiogramSortSelect");
+
+        const term = searchInput ? searchInput.value.trim().toLowerCase() : "";
+        const sortMode = sortSelect ? sortSelect.value : "default";
+
+        let rows = antibiogram.filter(item => {
+            if (!term) return true;
+            const name = (item.antibioticName || "").toLowerCase();
+            const code = (item.antibioticCode || "").toLowerCase();
+            return name.includes(term) || code.includes(term);
+        });
+
+        if (sortMode === "resistant-desc") {
+            rows.sort((a, b) => (Number(b.resistantPercentage) || 0) - (Number(a.resistantPercentage) || 0));
+        } else if (sortMode === "susceptible-desc") {
+            rows.sort((a, b) => (Number(b.susceptiblePercentage) || 0) - (Number(a.susceptiblePercentage) || 0));
+        } else if (sortMode === "tested-desc") {
+            rows.sort((a, b) => (Number(b.tested) || 0) - (Number(a.tested) || 0));
+        } else if (sortMode === "alpha-asc") {
+            rows.sort((a, b) => (a.antibioticName || "").localeCompare(b.antibioticName || ""));
+        }
+
+        return rows;
+    }
+
+    function renderAntibiogramTable(rows) {
+        const tbody = document.getElementById("antibiogramTableBody");
+        if (!tbody) return;
+
+        tbody.innerHTML = rows.map(item => {
+            const name = item.antibioticName ?? "Unknown";
+            const code = item.antibioticCode ?? "";
+            const tested = (Number(item.tested) || 0).toLocaleString();
+            const sCount = (Number(item.susceptible) || 0).toLocaleString();
+            const sPct = (Number(item.susceptiblePercentage) || 0).toFixed(1);
+            const iCount = (Number(item.intermediate) || 0).toLocaleString();
+            const iPct = (Number(item.intermediatePercentage) || 0).toFixed(1);
+            const rCount = (Number(item.resistant) || 0).toLocaleString();
+            const rPct = (Number(item.resistantPercentage) || 0).toFixed(1);
+
+            return `
+                <tr>
+                    <td class="abx-cell-name">
+                        ${name}
+                        ${code ? `<span class="abx-code-tag">${code}</span>` : ""}
+                    </td>
+                    <td class="text-end fw-semibold">${tested}</td>
+                    <td class="text-end"><span class="sir-badge sir-badge-s">${sCount} (${sPct}%)</span></td>
+                    <td class="text-end"><span class="sir-badge sir-badge-i">${iCount} (${iPct}%)</span></td>
+                    <td class="text-end"><span class="sir-badge sir-badge-r">${rCount} (${rPct}%)</span></td>
+                </tr>
+            `;
+        }).join("");
+    }
+
+    function createAntibiogram() {
+        const element = document.getElementById("antibiogramChart");
+        if (!element) return;
+
+        const rows = getFilteredAndSortedAntibiogram();
+        renderAntibiogramTable(rows);
+
+        if (rows.length === 0) {
+            showNoData("antibiogramChart");
+            return;
+        }
+
+        // Generous per-row height (52px/row) so bars are tall enough for large, readable percentage annotations and wide gaps
+        const dynamicHeight = Math.max(400, Math.min(1150, rows.length * 52 + 150));
+        element.style.height = `${dynamicHeight}px`;
+
+        const labels = rows.map(item => {
+            const name = item.antibioticName ?? "Unknown";
+            const tested = Number(item.tested) || 0;
+            return `${name}  (n=${tested})`;
+        });
+
+        const susceptible = rows.map(item => Number(item.susceptiblePercentage) || 0);
+        const intermediate = rows.map(item => Number(item.intermediatePercentage) || 0);
+        const resistant = rows.map(item => Number(item.resistantPercentage) || 0);
+
+        const formatSegmentLabel = (pct) => pct >= 4 ? `<b>${pct.toFixed(0)}%</b>` : "";
+
+        const susceptibleTrace = {
+            type: "bar",
+            name: "Susceptible (S)",
+            y: labels,
+            x: susceptible,
+            orientation: "h",
+            marker: { color: "#009E73" },
+            text: susceptible.map(formatSegmentLabel),
+            textposition: "inside",
+            insidetextanchor: "middle",
+            constraintext: "none",
+            textfont: {
+                color: "#ffffff",
+                size: 16,
+                family: "Inter, 'Segoe UI', Arial, sans-serif"
+            },
+            hovertemplate: "<b>%{y}</b><br>Susceptible: %{x:.1f}%<extra></extra>"
+        };
+
+        const intermediateTrace = {
+            type: "bar",
+            name: "Intermediate (I)",
+            y: labels,
+            x: intermediate,
+            orientation: "h",
+            marker: { color: "#E69F00" },
+            text: intermediate.map(formatSegmentLabel),
+            textposition: "inside",
+            insidetextanchor: "middle",
+            constraintext: "none",
+            textfont: {
+                color: "#0f172a",
+                size: 16,
+                family: "Inter, 'Segoe UI', Arial, sans-serif"
+            },
+            hovertemplate: "<b>%{y}</b><br>Intermediate: %{x:.1f}%<extra></extra>"
+        };
+
+        const resistantTrace = {
+            type: "bar",
+            name: "Resistant (R)",
+            y: labels,
+            x: resistant,
+            orientation: "h",
+            marker: { color: "#D55E00" },
+            text: resistant.map(formatSegmentLabel),
+            textposition: "inside",
+            insidetextanchor: "middle",
+            constraintext: "none",
+            textfont: {
+                color: "#ffffff",
+                size: 16,
+                family: "Inter, 'Segoe UI', Arial, sans-serif"
+            },
+            hovertemplate: "<b>%{y}</b><br>Resistant: %{x:.1f}%<extra></extra>"
+        };
+
+        const layout = {
+            ...getPublicationLayout(),
+            font: {
+                family: "Inter, 'Segoe UI', Arial, sans-serif",
+                size: 14,
+                color: "#0f172a"
+            },
+            barmode: "stack",
+            bargap: 0.38,
+            margin: { l: 225, r: 25, t: 48, b: 64 },
+            xaxis: {
+                range: [0, 100],
+                showline: true,
+                linecolor: "#94a3b8",
+                ticks: "outside",
+                tickcolor: "#94a3b8",
+                tickfont: { size: 13, color: "#1e293b" },
+                title: { text: "Percentage of Tested Accepted Isolates (%)", font: { size: 13, color: "#334155" } },
+                gridcolor: "#f1f5f9",
+                zeroline: false
+            },
+            yaxis: {
+                showline: true,
+                linecolor: "#94a3b8",
+                tickfont: { size: 13.5, color: "#0f172a" },
+                automargin: true,
+                autorange: "reversed",
+                showgrid: false
+            },
+            legend: {
+                orientation: "h",
+                x: 0.5,
+                xanchor: "center",
+                y: 1.06,
+                yanchor: "bottom",
+                font: { size: 14, color: "#0f172a" }
+            }
+        };
+
+        Plotly.newPlot(
+            "antibiogramChart",
+            [susceptibleTrace, intermediateTrace, resistantTrace],
+            layout,
+            { responsive: true, displayModeBar: false }
+        );
+    }
+
+
+    // =========================================================
+    // INTERACTIVE LONGITUDINAL ANTIBIOTIC RESISTANCE TRENDS
+    // =========================================================
+
+    function computeDynamicTrendYAxisMax(maxObservedPct) {
+        if (!Number.isFinite(maxObservedPct) || maxObservedPct <= 0) {
+            return 5;
+        }
+        if (maxObservedPct < 5) {
+            return Math.max(2, Math.ceil(maxObservedPct * 1.25));
+        }
+        if (maxObservedPct < 15) {
+            return Math.ceil((maxObservedPct * 1.2) / 2) * 2;
+        }
+        if (maxObservedPct < 50) {
+            return Math.ceil((maxObservedPct * 1.15) / 5) * 5;
+        }
+        return Math.min(100, Math.ceil((maxObservedPct * 1.1) / 10) * 10);
+    }
+
+    function initResistanceTrends() {
+        const chartEl = document.getElementById("resistanceTrendsChart");
+        const dropdownEl = document.getElementById("trendAntibioticDropdown");
+        const checkListEl = document.getElementById("trendAntibioticCheckList");
+        const btnTrendline = document.getElementById("btnToggleTrendline");
+        const slopeSummaryEl = document.getElementById("trendSlopeSummary");
+
+        if (!chartEl || !dropdownEl || !checkListEl) return;
+
+        if (!Array.isArray(antibioticTrendObservations) || antibioticTrendObservations.length === 0) {
+            showNoData("resistanceTrendsChart", "No longitudinal AST dates available for selected organism(s)");
+            return;
+        }
+
+        let showTrendline = false;
+
+        const abxTotals = new Map();
+        antibioticTrendObservations.forEach(obs => {
+            const existing = abxTotals.get(obs.antibioticCode) || {
+                code: obs.antibioticCode,
+                name: obs.antibioticName || obs.antibioticCode,
+                tested: 0
+            };
+            existing.tested += Number(obs.tested) || 0;
+            abxTotals.set(obs.antibioticCode, existing);
+        });
+
+        const sortedAbx = Array.from(abxTotals.values())
+            .sort((a, b) => b.tested - a.tested || a.name.localeCompare(b.name));
+
+        // Do not auto-select any antibiotics on load — let the user choose
+        checkListEl.innerHTML = sortedAbx.map(abx => {
+            const checkId = `trend_abx_${abx.code}`;
+            const searchText = `${abx.name} ${abx.code}`.toLowerCase();
+            return `
+                <div class="form-check multi-check-item" data-search-text="${searchText}">
+                    <input class="form-check-input multi-check-input"
+                           type="checkbox"
+                           value="${abx.code}"
+                           id="${checkId}" />
+                    <label class="form-check-label small" for="${checkId}">
+                        ${abx.name} (${abx.code}) &mdash; n=${abx.tested}
+                    </label>
+                </div>
+            `;
+        }).join("");
+
+        bindMultiCheckDropdown(dropdownEl);
+
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+        function getBucketInfo(year, month, granularity) {
+            if (granularity === "quarter") {
+                const q = Math.floor((month - 1) / 3) + 1;
+                return { key: `${year}-Q${q}`, label: `Q${q} ${year}`, sortOrder: year * 10 + q };
+            }
+            if (granularity === "semiannual") {
+                const h = month <= 6 ? 1 : 2;
+                return {
+                    key: `${year}-H${h}`,
+                    label: `H${h} ${year} (${h === 1 ? "Jan–Jun" : "Jul–Dec"})`,
+                    sortOrder: year * 10 + h
+                };
+            }
+            if (granularity === "year") {
+                return { key: `${year}`, label: `${year}`, sortOrder: year };
+            }
+            return {
+                key: `${year}-${String(month).padStart(2, "0")}`,
+                label: `${monthNames[month - 1]} ${year}`,
+                sortOrder: year * 100 + month
+            };
+        }
+
+        function computeOLS(values) {
+            const pts = [];
+            values.forEach((v, idx) => {
+                if (v !== null && v !== undefined && !Number.isNaN(v)) {
+                    pts.push({ x: idx, y: v });
+                }
+            });
+            if (pts.length < 2) return null;
+
+            const n = pts.length;
+            const sumX = pts.reduce((acc, p) => acc + p.x, 0);
+            const sumY = pts.reduce((acc, p) => acc + p.y, 0);
+            const sumXY = pts.reduce((acc, p) => acc + p.x * p.y, 0);
+            const sumXX = pts.reduce((acc, p) => acc + p.x * p.x, 0);
+
+            const denom = (n * sumXX) - (sumX * sumX);
+            if (denom === 0) return null;
+
+            const slope = ((n * sumXY) - (sumX * sumY)) / denom;
+            const intercept = (sumY - (slope * sumX)) / n;
+
+            const line = values.map((_, idx) => {
+                const projected = intercept + slope * idx;
+                return Math.max(0, Math.min(100, Number(projected.toFixed(2))));
+            });
+
+            return { slope, intercept, line };
+        }
+
+        function renderTrendsChart() {
+            const selectedCodes = Array.from(checkListEl.querySelectorAll(".multi-check-input:checked"))
+                .map(cb => cb.value);
+
+            if (selectedCodes.length === 0) {
+                showNoData("resistanceTrendsChart", "Select one or more antibiotics above to plot resistance trends");
+                if (slopeSummaryEl) slopeSummaryEl.innerHTML = "";
+                return;
+            }
+
+            const granularityEl = document.querySelector('input[name="trendGranularity"]:checked');
+            const granularity = granularityEl ? granularityEl.value : "month";
+
+            const bucketMap = new Map();
+            const cellAgg = new Map();
+
+            antibioticTrendObservations.forEach(obs => {
+                const b = getBucketInfo(obs.year, obs.month, granularity);
+                bucketMap.set(b.key, b);
+
+                if (!selectedCodes.includes(obs.antibioticCode)) return;
+
+                const recGroup = isGroupedByRecruitmentType ? (obs.recruitmentType || "Active") : "Overall";
+                const cellKey = `${obs.antibioticCode}|${recGroup}|${b.key}`;
+                const cur = cellAgg.get(cellKey) || { resistant: 0, tested: 0 };
+                cur.resistant += Number(obs.resistant) || 0;
+                cur.tested += Number(obs.tested) || 0;
+                cellAgg.set(cellKey, cur);
+            });
+
+            const sortedBuckets = Array.from(bucketMap.values())
+                .sort((a, b) => a.sortOrder - b.sortOrder);
+
+            const labels = sortedBuckets.map(b => b.label);
+            const traces = [];
+            const slopeNotes = [];
+            let maxObservedPct = 0;
+
+            const seriesGroups = isGroupedByRecruitmentType ? ["Active", "Passive"] : ["Overall"];
+
+            selectedCodes.forEach((code, idx) => {
+                const color = pubPalette[idx % pubPalette.length];
+                const meta = abxTotals.get(code);
+                const baseName = meta ? `${meta.name} (${code})` : code;
+
+                seriesGroups.forEach(recGroup => {
+                    const isPassive = recGroup === "Passive";
+                    const seriesLabel = isGroupedByRecruitmentType
+                        ? `${baseName} [${isPassive ? "Passive (ISO)" : "Active"}]`
+                        : baseName;
+
+                    const yValues = sortedBuckets.map(b => {
+                        const agg = cellAgg.get(`${code}|${recGroup}|${b.key}`);
+                        if (!agg || agg.tested === 0) return null;
+                        const pct = Number(((agg.resistant / agg.tested) * 100).toFixed(2));
+                        if (pct > maxObservedPct) maxObservedPct = pct;
+                        return pct;
+                    });
+
+                    if (yValues.every(v => v === null)) {
+                        return;
+                    }
+
+                    const hoverDetails = sortedBuckets.map(b => {
+                        const agg = cellAgg.get(`${code}|${recGroup}|${b.key}`);
+                        if (!agg || agg.tested === 0) return "Not tested";
+                        const pct = ((agg.resistant / agg.tested) * 100).toFixed(1);
+                        return `${pct}% resistant (${agg.resistant}/${agg.tested})`;
+                    });
+
+                    traces.push({
+                        type: "scatter",
+                        mode: "lines+markers",
+                        name: seriesLabel,
+                        x: labels,
+                        y: yValues,
+                        customdata: hoverDetails,
+                        connectgaps: true,
+                        line: {
+                            color: color,
+                            width: 2.5,
+                            dash: isPassive ? "dash" : "solid"
+                        },
+                        marker: {
+                            color: color,
+                            size: 7.5,
+                            symbol: isPassive ? "diamond" : "circle",
+                            line: { color: "#ffffff", width: 1.5 }
+                        },
+                        hovertemplate: `<b>${seriesLabel}</b><br>%{x}: %{customdata}<extra></extra>`
+                    });
+
+                    if (showTrendline) {
+                        const ols = computeOLS(yValues);
+                        if (ols) {
+                            ols.line.forEach(val => {
+                                if (val > maxObservedPct) maxObservedPct = val;
+                            });
+                            const sign = ols.slope >= 0 ? "+" : "";
+                            const slopeLabel = isGroupedByRecruitmentType ? `${code} (${recGroup})` : code;
+                            slopeNotes.push(`<strong>${slopeLabel}</strong>: ${sign}${ols.slope.toFixed(2)}% per ${granularity}`);
+                            traces.push({
+                                type: "scatter",
+                                mode: "lines",
+                                name: `${slopeLabel} Trend (${sign}${ols.slope.toFixed(2)}%/period)`,
+                                x: labels,
+                                y: ols.line,
+                                line: { color: color, width: 1.8, dash: "dot" },
+                                hovertemplate: `<b>${slopeLabel} Linear Trend</b><br>%{x}: %{y:.1f}%<extra></extra>`
+                            });
+                        }
+                    }
+                });
+            });
+
+            if (traces.length === 0) {
+                showNoData("resistanceTrendsChart", "No resistance observations available for the selected antibiotic(s)");
+                if (slopeSummaryEl) slopeSummaryEl.innerHTML = "";
+                return;
+            }
+
+            const yAxisMax = computeDynamicTrendYAxisMax(maxObservedPct);
+
+            const layout = {
+                ...getPublicationLayout(),
+                font: {
+                    family: "Inter, 'Segoe UI', Arial, sans-serif",
+                    size: 13,
+                    color: "#0f172a"
+                },
+                margin: { l: 65, r: 25, t: 36, b: 68 },
+                xaxis: {
+                    showline: true,
+                    linecolor: "#94a3b8",
+                    ticks: "outside",
+                    tickcolor: "#94a3b8",
+                    tickangle: labels.length > 8 ? -30 : 0,
+                    tickfont: { size: 12.5, color: "#1e293b" },
+                    showgrid: false
+                },
+                yaxis: {
+                    range: [0, yAxisMax],
+                    showline: true,
+                    linecolor: "#94a3b8",
+                    ticks: "outside",
+                    tickcolor: "#94a3b8",
+                    tickfont: { size: 12.5, color: "#1e293b" },
+                    title: { text: "Resistant Isolates (%R)", font: { size: 13, color: "#334155" } },
+                    gridcolor: "#f1f5f9",
+                    zeroline: false
+                },
+                legend: {
+                    orientation: "h",
+                    x: 0.5,
+                    xanchor: "center",
+                    y: 1.12,
+                    yanchor: "bottom",
+                    font: { size: 12.5, color: "#0f172a" }
+                }
+            };
+
+            Plotly.newPlot("resistanceTrendsChart", traces, layout, { responsive: true, displayModeBar: false });
+
+            if (slopeSummaryEl) {
+                slopeSummaryEl.innerHTML = showTrendline && slopeNotes.length > 0
+                    ? `<i class="bi bi-calculator me-1"></i>OLS Trend Slopes: ${slopeNotes.join(" &bull; ")}`
+                    : "";
+            }
+        }
+
+        dropdownEl.addEventListener("multicheck:change", renderTrendsChart);
+        document.querySelectorAll('input[name="trendGranularity"]').forEach(radio => {
+            radio.addEventListener("change", renderTrendsChart);
+        });
+
+        if (btnTrendline) {
+            btnTrendline.addEventListener("click", function () {
+                showTrendline = !showTrendline;
+                btnTrendline.setAttribute("aria-pressed", String(showTrendline));
+                btnTrendline.classList.toggle("btn-dark", showTrendline);
+                btnTrendline.classList.toggle("btn-outline-dark", !showTrendline);
+                const spanEl = btnTrendline.querySelector("span");
+                if (spanEl) {
+                    spanEl.textContent = showTrendline ? "Hide Trendline" : "Add Trendline";
+                }
+                renderTrendsChart();
+            });
+        }
+
+        renderTrendsChart();
+    }
+
+
+    // =========================================================
+    // GENOMIC FILTER STATUS & TAB RESIZING
+    // =========================================================
+
+    function updateGenomicFilterStatus() {
+        const status = document.getElementById("genomicFilterStatus");
+        if (!status) return;
+
+        status.textContent = genomicFilterCount === 0
+            ? "All accepted sequenced isolates"
+            : `${genomicFilterCount} genomic filter(s) active`;
+    }
+
+    function resizeVisibleCharts() {
+        document.querySelectorAll(".plotly-chart").forEach(chart => {
+            if (chart.offsetParent !== null && chart.data) {
+                Plotly.Plots.resize(chart);
+            }
+        });
+    }
+
+
+    // =========================================================
+    // INITIALISE DASHBOARD
+    // =========================================================
+
+    document.addEventListener("DOMContentLoaded", function () {
+
+        initRecruitmentControls();
+        initMultiCheckDropdowns();
+        updateGenomicFilterStatus();
+
+        // 1. PATIENT & METADATA
+        createDonutChart("patientsBySexChart", patientsBySex);
+        createBarChart("patientsByAgeGroupChart", patientsByAgeGroup, {
+            yAxisTitle: "Accepted Patients (n)"
+        });
+        createDonutChart("militaryCivilianChart", militaryCivilian);
+        createDonutChart("patientTypeChart", patientType);
+        createDonutChart("haiCaiChart", haiCai);
+        createBarChart("clinicalPresentationChart", clinicalPresentation, {
+            horizontal: true,
+            sortDescending: true,
+            xAxisTitle: "Accepted Patients (n)"
+        });
+
+        // 2. ISOLATE INFORMATION & AST
+        createBarChart("organismDistributionChart", isolatesByOrganism, {
+            horizontal: true,
+            sortDescending: true,
+            xAxisTitle: "Accepted Isolates (n)"
+        });
+        createDonutChart("cultureResultsChart", cultureResults);
+
+        createAntibiogram();
+        initResistanceTrends();
+
+        const antibiogramSearchInput = document.getElementById("antibiogramSearchInput");
+        const antibiogramSortSelect = document.getElementById("antibiogramSortSelect");
+
+        if (antibiogramSearchInput) {
+            antibiogramSearchInput.addEventListener("input", createAntibiogram);
+        }
+        if (antibiogramSortSelect) {
+            antibiogramSortSelect.addEventListener("change", createAntibiogram);
+        }
+
+        // 3. GENOMICS
+        createLineChart("sequencingOverTimeChart", sequencingOverTime);
+        createBarChart("genomeCompletenessChart", genomeCompleteness, {
+            yAxisTitle: "Genomes (n)",
+            barColor: "#009E73"
+        });
+        createBarChart("strainTypesChart", strainTypes, {
+            horizontal: true,
+            sortDescending: true,
+            xAxisTitle: "Genomes (n)"
+        });
+        createBarChart("genePrevalenceChart", genePrevalence, {
+            horizontal: true,
+            sortDescending: true,
+            xAxisTitle: "Genomes Carrying Gene (n)"
+        });
+        createBarChart("genomicScoresChart", genomicScores, {
+            yAxisTitle: "Score / Count",
+            showPercent: false
+        });
+
+        // Resize Plotly charts when Bootstrap tabs change
+        document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+            tab.addEventListener("shown.bs.tab", function () {
+                setTimeout(resizeVisibleCharts, 100);
+            });
+        });
+    });
+
+</script>
+
+
+<style>
+
+    /* =========================================================
+                       PAGE & HEADER
+                       ========================================================= */
+
+    .dashboard-page {
+        width: 100%;
+        padding: 1rem 1.25rem;
+    }
+
+    .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .dashboard-title-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.65rem;
+    }
+
+    .dashboard-title {
+        margin: 0;
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .accepted-scope-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.2rem 0.6rem;
+        border-radius: 999px;
+        background: #ecfdf5;
+        border: 1px solid #a7f3d0;
+        color: #065f46;
+        font-size: 0.74rem;
+        font-weight: 600;
+    }
+
+    .recruitment-scope-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.2rem 0.6rem;
+        border-radius: 999px;
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        color: #1d4ed8;
+        font-size: 0.74rem;
+        font-weight: 600;
+    }
+
+    .dashboard-subtitle {
+        margin: 0.2rem 0 0;
+        color: #64748b;
+        font-size: 0.84rem;
+    }
+
+    .dashboard-header-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+        gap: 0.65rem;
+    }
+
+    .data-updated {
+        font-size: 0.78rem;
+        color: #64748b;
+        white-space: nowrap;
+    }
+
+
+    /* =========================================================
+                       COMMON CARD & FILTERS
+                       ========================================================= */
+
+    .dashboard-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.6rem;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+
+    .filters-card {
+        margin-bottom: 0.9rem;
+    }
+
+    .filters-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.65rem 0.95rem;
+    }
+
+    .filters-title {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+    }
+
+    .filters-title-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 0.45rem;
+        background: #eff6ff;
+        color: #0072B2;
+    }
+
+    .filters-title h2 {
+        margin: 0;
+        font-size: 0.92rem;
+        font-weight: 650;
+        color: #0f172a;
+    }
+
+    .filters-title p {
+        margin: 0.05rem 0 0;
+        color: #64748b;
+        font-size: 0.76rem;
+    }
+
+    .filters-body {
+        padding: 0.85rem 0.95rem;
+        border-top: 1px solid #f1f5f9;
+    }
+
+        .filters-body .form-label,
+        .ast-filter-form .form-label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 0.25rem;
+        }
+
+    .filter-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+
+    /* =========================================================
+                       MULTI-CHECKBOX DROPDOWN
+                       ========================================================= */
+
+    .multi-check-toggle {
+        background-color: #ffffff;
+        border-color: #cbd5e1;
+        color: #1e293b;
+        height: 31px;
+    }
+
+        .multi-check-toggle:hover,
+        .multi-check-toggle:focus {
+            background-color: #f8fafc;
+            border-color: #94a3b8;
+            color: #0f172a;
+        }
+
+    .multi-check-menu {
+        max-height: 270px;
+        overflow-y: auto;
+        z-index: 1050;
+    }
+
+    .multi-check-list {
+        max-height: 175px;
+        overflow-y: auto;
+        padding-right: 0.2rem;
+    }
+
+    .multi-check-item {
+        padding-top: 0.15rem;
+        padding-bottom: 0.15rem;
+    }
+
+        .multi-check-item .form-check-label {
+            cursor: pointer;
+            color: #334155;
+            user-select: none;
+        }
+
+
+    /* =========================================================
+                       COMPACT KPI STRIP
+                       ========================================================= */
+
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 0.6rem;
+        margin-bottom: 1.15rem;
+    }
+
+    .kpi-grid-7 {
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+    }
+
+    .kpi-card {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        min-height: 64px;
+        padding: 0.55rem 0.7rem;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.55rem;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+    }
+
+    .kpi-card-mrsa {
+        border-color: #fecaca;
+        background: #fffafa;
+    }
+
+    .kpi-icon {
+        display: flex;
+        flex-shrink: 0;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 0.45rem;
+        font-size: 0.98rem;
+    }
+
+    .kpi-patients {
+        background: #e0f2fe;
+        color: #0072B2;
+    }
+
+    .kpi-rejected {
+        background: #fef2f2;
+        color: #b91c1c;
+    }
+
+    .kpi-isolates {
+        background: #ecfdf5;
+        color: #009E73;
+    }
+
+    .kpi-positive {
+        background: #f0fdf4;
+        color: #15803d;
+    }
+
+    .kpi-mdr {
+        background: #fff7ed;
+        color: #D55E00;
+    }
+
+    .kpi-mrsa {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+
+    .kpi-genomics {
+        background: #fdf2f8;
+        color: #CC79A7;
+    }
+
+    .kpi-content {
+        min-width: 0;
+    }
+
+    .kpi-label {
+        font-size: 0.71rem;
+        font-weight: 600;
+        color: #475569;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .kpi-value {
+        margin-top: 0.05rem;
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #0f172a;
+        line-height: 1.15;
+    }
+
+    .kpi-subtext {
+        margin-top: 0.08rem;
+        font-size: 0.67rem;
+        color: #64748b;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+
+    /* =========================================================
+                       TABS & SECTION INTRO
+                       ========================================================= */
+
+    .dashboard-tabs {
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        border-bottom: 1px solid #cbd5e1;
+    }
+
+        .dashboard-tabs .nav-link {
+            white-space: nowrap;
+            color: #64748b;
+            font-weight: 600;
+            font-size: 0.88rem;
+            padding: 0.7rem 0.95rem;
+        }
+
+            .dashboard-tabs .nav-link.active {
+                color: #0072B2;
+                border-bottom-color: #ffffff;
+            }
+
+            .dashboard-tabs .nav-link i {
+                margin-right: 0.35rem;
+            }
+
+    .dashboard-tab-content {
+        padding-top: 1.1rem;
+    }
+
+    .section-intro {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 0.9rem;
+    }
+
+        .section-intro h2 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .section-intro p {
+            margin: 0.2rem 0 0;
+            color: #64748b;
+            font-size: 0.83rem;
+        }
+
+    .genomic-filter-status {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.3rem 0.6rem;
+        border-radius: 999px;
+        background: #f1f5f9;
+        color: #475569;
+        font-size: 0.74rem;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+
+    /* =========================================================
+                       CHART GRID & CARDS
+                       ========================================================= */
+
+    .chart-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.9rem;
+    }
+
+    .chart-card {
+        position: relative;
+        min-width: 0;
+        padding: 0.9rem;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.6rem;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+
+    .chart-card-wide {
+        grid-column: span 2;
+    }
+
+    .chart-header {
+        margin-bottom: 0.6rem;
+        padding-right: 2.75rem;
+    }
+
+        .chart-header h3 {
+            margin: 0;
+            font-size: 0.94rem;
+            font-weight: 650;
+            color: #0f172a;
+        }
+
+        .chart-header p {
+            margin: 0.15rem 0 0;
+            color: #64748b;
+            font-size: 0.76rem;
+        }
+
+    .chart-actions {
+        position: absolute;
+        top: 0.8rem;
+        right: 0.8rem;
+    }
+
+    .plotly-chart {
+        width: 100%;
+        height: 330px;
+    }
+
+    .chart-pie {
+        height: 340px;
+    }
+
+    .chart-large {
+        height: 400px;
+    }
+
+
+    /* =========================================================
+                       AST SECTION & ENHANCED ANTIBIOGRAM TYPOGRAPHY
+                       ========================================================= */
+
+    .ast-analysis-card {
+        margin-top: 0.9rem;
+        padding: 1.1rem;
+    }
+
+    .ast-header {
+        margin-bottom: 0.85rem;
+    }
+
+        .ast-header h3 {
+            margin: 0;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .ast-header p {
+            margin: 0.2rem 0 0;
+            color: #64748b;
+            font-size: 0.85rem;
+        }
+
+    .ast-filter-form {
+        padding-bottom: 0.85rem;
+        margin-bottom: 0.85rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .ast-summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 0.85rem;
+    }
+
+    .ast-count-badge,
+    .ast-method-badge,
+    .ast-pooled-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 999px;
+        font-size: 0.84rem;
+        font-weight: 600;
+    }
+
+    .ast-count-badge {
+        background: #e0f2fe;
+        color: #0072B2;
+    }
+
+    .ast-method-badge {
+        background: #f1f5f9;
+        color: #334155;
+    }
+
+    .ast-pooled-badge {
+        background: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fde68a;
+    }
+
+    .ast-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 0.7rem;
+    }
+
+    .antibiogram-chart {
+        height: 520px;
+    }
+
+    .antibiogram-table-wrapper {
+        margin-top: 1.1rem;
+    }
+
+    .antibiogram-table-enhanced {
+        font-size: 0.98rem;
+        font-variant-numeric: tabular-nums;
+    }
+
+        .antibiogram-table-enhanced thead th {
+            font-size: 0.86rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: #334155;
+            padding: 0.7rem 0.85rem;
+            border-bottom: 2px solid #cbd5e1;
+        }
+
+        .antibiogram-table-enhanced tbody td {
+            padding: 0.65rem 0.85rem;
+        }
+
+    .abx-cell-name {
+        font-weight: 600;
+        font-size: 1rem;
+        color: #0f172a;
+    }
+
+    .abx-code-tag {
+        display: inline-block;
+        margin-left: 0.35rem;
+        padding: 0.1rem 0.42rem;
+        font-size: 0.76rem;
+        font-weight: 600;
+        color: #475569;
+        background: #f1f5f9;
+        border: 1px solid #cbd5e1;
+        border-radius: 0.3rem;
+    }
+
+    .sir-badge {
+        display: inline-block;
+        padding: 0.22rem 0.55rem;
+        border-radius: 0.35rem;
+        font-size: 0.92rem;
+        font-weight: 600;
+    }
+
+    .sir-badge-s {
+        background: #ecfdf5;
+        color: #065f46;
+    }
+
+    .sir-badge-i {
+        background: #fffbeb;
+        color: #92400e;
+    }
+
+    .sir-badge-r {
+        background: #fef2f2;
+        color: #991b1b;
+    }
+
+    .ast-trends-section {
+        margin-top: 1.75rem;
+        padding-top: 1.35rem;
+        border-top: 1px solid #cbd5e1;
+    }
+
+    .ast-trends-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-bottom: 0.85rem;
+    }
+
+        .ast-trends-header h4 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .ast-trends-header p {
+            margin: 0.2rem 0 0;
+            font-size: 0.82rem;
+            color: #64748b;
+        }
+
+    .empty-analysis-state {
+        padding: 2rem 1rem;
+        text-align: center;
+        color: #64748b;
+    }
+
+        .empty-analysis-state i {
+            display: block;
+            margin-bottom: 0.65rem;
+            font-size: 1.85rem;
+            color: #94a3b8;
+        }
+
+        .empty-analysis-state h4 {
+            color: #334155;
+            font-size: 0.96rem;
+        }
+
+        .empty-analysis-state p {
+            max-width: 600px;
+            margin: 0.4rem auto 0;
+            font-size: 0.83rem;
+        }
+
+
+    /* =========================================================
+                       RESPONSIVE DESIGN
+                       ========================================================= */
+
+    @@media (max-width: 1199.98px) {
+        .kpi-grid,
+        .kpi-grid-7 {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+    }
+
+    @@media (max-width: 991.98px) {
+        .chart-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .chart-card-wide {
+            grid-column: span 1;
+        }
+    }
+
+    @@media (max-width: 767.98px) {
+        .dashboard-page {
+            padding: 0.75rem;
+        }
+
+        .dashboard-header {
+            flex-direction: column;
+        }
+
+        .dashboard-header-actions {
+            justify-content: flex-start;
+            width: 100%;
+        }
+
+        .filters-header {
+            align-items: flex-start;
+        }
+
+        .filters-title p {
+            display: none;
+        }
+
+        .kpi-grid,
+        .kpi-grid-7 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .section-intro {
+            flex-direction: column;
+        }
+
+        .plotly-chart {
+            height: 290px;
+        }
+
+        .chart-large {
+            height: 350px;
+        }
+    }
+
+    @@media (max-width: 420px) {
+        .kpi-grid,
+        .kpi-grid-7 {
+            grid-template-columns: 1fr;
+        }
+
+        .dashboard-title {
+            font-size: 1.2rem;
+        }
+
+        .data-updated {
+            white-space: normal;
+        }
+    }
+
+</style>
+}

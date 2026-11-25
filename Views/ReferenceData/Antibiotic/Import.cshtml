@@ -1,0 +1,173 @@
+﻿@{
+    ViewData["Title"] = "Import Antibiotics";
+}
+
+<div class="container-fluid">
+
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="mb-1">Import Antibiotics</h2>
+            <p class="text-muted mb-0">
+                Import antibiotic reference data from an Excel file.
+            </p>
+        </div>
+
+        <a asp-action="Index"
+           class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i>
+            Back
+        </a>
+    </div>
+
+
+    <!-- Error Message -->
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show"
+             role="alert">
+
+            @TempData["Error"]
+
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert">
+            </button>
+
+        </div>
+    }
+
+
+    <div class="row">
+
+        <div class="col-lg-8 col-xl-7">
+
+            <div class="card shadow-sm">
+
+                <div class="card-body">
+
+                    <h5 class="card-title">
+                        Upload Excel File
+                    </h5>
+
+                    <p class="text-muted">
+                        Select an Excel workbook containing antibiotic
+                        reference data.
+                    </p>
+
+
+                    <form asp-action="Import"
+                          method="post"
+                          enctype="multipart/form-data">
+
+                        @Html.AntiForgeryToken()
+
+                        <div class="mb-3">
+
+                            <label for="file"
+                                   class="form-label">
+                                Excel File
+                            </label>
+
+                            <input type="file"
+                                   name="file"
+                                   id="file"
+                                   class="form-control"
+                                   accept=".xlsx"
+                                   required />
+
+                            <div class="form-text">
+                                Only .xlsx files are supported.
+                            </div>
+
+                        </div>
+
+
+                        <div class="d-flex justify-content-between align-items-center">
+
+                            <a asp-action="Template"
+                               class="btn btn-outline-secondary">
+
+                                <i class="bi bi-file-earmark-excel"></i>
+                                Download Template
+
+                            </a>
+
+                            <button type="submit"
+                                    class="btn btn-primary">
+
+                                <i class="bi bi-upload"></i>
+                                Import Antibiotics
+
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+
+            <!-- Import Instructions -->
+
+            <div class="card shadow-sm mt-3">
+
+                <div class="card-body">
+
+                    <h5 class="card-title">
+                        Import Requirements
+                    </h5>
+
+                    <ul class="mb-0">
+
+                        <li>
+                            The workbook must be in
+                            <strong>.xlsx</strong> format.
+                        </li>
+
+                        <li>
+                            The first worksheet will be used.
+                        </li>
+
+                        <li>
+                            The first row must contain the column headers.
+                        </li>
+
+                        <li>
+                            Data should begin from the second row.
+                        </li>
+
+                        <li>
+                            <strong>AntibioticCode</strong>,
+                            <strong>AntibioticName</strong>, and
+                            <strong>AntibioticClassName</strong>
+                            are required.
+                        </li>
+
+                        <li>
+                            The specified antibiotic class must already
+                            exist in the Antibiotic Class reference data.
+                        </li>
+
+                        <li>
+                            Existing antibiotic codes will be skipped.
+                        </li>
+
+                        <li>
+                            Rows with missing required information will
+                            be skipped.
+                        </li>
+
+                    </ul>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

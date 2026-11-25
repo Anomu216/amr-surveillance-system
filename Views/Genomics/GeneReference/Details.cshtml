@@ -1,0 +1,85 @@
+﻿@model AMRSurveillance.ViewModels.GeneReferenceViewModel
+
+@{
+    ViewData["Title"] = "Gene Reference Details";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>Gene Reference Details</h2>
+            <p class="text-muted mb-0">
+                View the registered antimicrobial resistance gene information.
+            </p>
+        </div>
+
+        <a asp-controller="GeneReference"
+           asp-action="Index"
+           class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Gene Reference
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">@Model.GeneName</h5>
+        </div>
+
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-md-4">Gene Name</dt>
+                <dd class="col-md-8">
+                    @Model.GeneName
+                </dd>
+
+                <dt class="col-md-4">Gene Description</dt>
+                <dd class="col-md-8">
+                    @(string.IsNullOrWhiteSpace(Model.GeneDescription)
+                                        ? "Not provided"
+                                        : Model.GeneDescription)
+                </dd>
+
+                <dt class="col-md-4">Gene Category</dt>
+                <dd class="col-md-8">
+                    @(string.IsNullOrWhiteSpace(Model.GeneCategory)
+                                        ? "Not specified"
+                                        : Model.GeneCategory)
+                </dd>
+
+                <dt class="col-md-4">Applicable Organism</dt>
+                <dd class="col-md-8">
+                    @(string.IsNullOrWhiteSpace(Model.ApplicableOrganism)
+                                        ? "Not specified"
+                                        : Model.ApplicableOrganism)
+                </dd>
+
+                <dt class="col-md-4">Status</dt>
+                <dd class="col-md-8">
+                    @if (Model.IsActive)
+                    {
+                        <span class="badge bg-success">Active</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">Inactive</span>
+                    }
+                </dd>
+            </dl>
+        </div>
+
+        <div class="card-footer bg-white d-flex justify-content-end gap-2">
+            <a asp-controller="GeneReference"
+               asp-action="Edit"
+               asp-route-id="@Model.GeneName"
+               class="btn btn-primary">
+                <i class="bi bi-pencil-square"></i> Edit
+            </a>
+
+            <a asp-controller="GeneReference"
+               asp-action="Index"
+               class="btn btn-outline-secondary">
+                Close
+            </a>
+        </div>
+    </div>
+</div>

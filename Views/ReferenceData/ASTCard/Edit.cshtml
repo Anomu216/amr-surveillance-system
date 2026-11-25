@@ -1,0 +1,486 @@
+﻿@model AMRSurveillance.ViewModels.ASTCardEditViewModel
+
+@{
+    var isCreate = ViewContext.RouteData.Values["action"]?.ToString() == "Create";
+    ViewData["Title"] = isCreate ? "Create AST Card" : $"Configure AST Card — {Model.ASTCard}";
+    var selectedOrganismSet = new HashSet<string>(
+        Model.SelectedWHONETIDs ?? [],
+        StringComparer.OrdinalIgnoreCase);
+}
+
+<div class="container-fluid py-2">
+
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div>
+            <h2 class="mb-1">@(isCreate ? "Create AST Card" : $"Configure AST Card: {Model.ASTCard}")</h2>
+            <p class="text-muted mb-0">
+                Set the exact antibiotic sequence below. The Worksheet data entry screen will display antibiotics in this exact order.
+            </p>
+        </div>
+
+        <a asp-action="Index"
+           class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>
+            Back to AST Cards
+        </a>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <form asp-action="@(isCreate ? "Create" : "Edit")"
+          asp-route-id="@(isCreate ? null : Model.ASTCard)"
+          method="post"
+          id="astCardForm">
+        @Html.AntiForgeryToken()
+
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+        <div class="row g-3">
+            <!-- Left Column: Card Details & Organism Mapping -->
+            <div class="col-lg-5">
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0">Card Details</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label asp-for="ASTCard" class="form-label"></label>
+                            @if (isCreate)
+                            {
+                                <input asp-for="ASTCard"
+                                       class="form-control text-uppercase"
+                                       placeholder="e.g. GN83"
+                                       autocomplete="off" />
+                            }
+                            else
+                            {
+                                <input asp-for="ASTCard"
+                                       class="form-control bg-light"
+                                       readonly />
+                            }
+                            <span asp-validation-for="ASTCard" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Description" class="form-label"></label>
+                            <input asp-for="Description"
+                                   class="form-control"
+                                   placeholder="e.g. Gram-Negative Susceptibility Card"
+                                   autocomplete="off" />
+                            <span asp-validation-for="Description" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-check">
+                            <input asp-for="IsActive" class="form-check-input" />
+                            <label asp-for="IsActive" class="form-check-label"></label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Organism Mappings (Searchable Checkboxes) -->
+                <div class="card shadow-sm">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">Mapped Organisms (WHONET IDs)</h6>
+                        <span class="badge bg-primary" id="selectedOrganismCount">
+                            @selectedOrganismSet.Count selected
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-2">
+                            Check one or more organisms below. Leave all unchecked to allow this card for any organism.
+                        </p>
+
+                        <div class="input-group input-group-sm mb-2">
+                            <span class="input-group-text bg-white">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text"
+                                   id="organismSearchInput"
+                                   class="form-control"
+                                   placeholder="Search WHONET IDs..."
+                                   autocomplete="off" />
+                            <button type="button"
+                                    id="clearOrganismSearchBtn"
+                                    class="btn btn-outline-secondary d-none"
+                                    title="Clear search">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button"
+                                        id="selectVisibleOrganismsBtn"
+                                        class="btn btn-outline-secondary">
+                                    Select Visible
+                                </button>
+                                <button type="button"
+                                        id="clearAllOrganismsBtn"
+                                        class="btn btn-outline-secondary">
+                                    Clear All
+                                </button>
+                            </div>
+                            <small class="text-muted" id="visibleOrganismHint"></small>
+                        </div>
+
+                        <div id="organismChecklistContainer"
+                             class="border rounded p-2 bg-white"
+                             style="max-height: 290px; overflow-y: auto;">
+                            @if (Model.AvailableOrganisms.Count == 0)
+                            {
+                                <div class="text-muted small py-2 text-center">
+                                    No organisms available in the reference list.
+                                </div>
+                            }
+                            else
+                            {
+                                @for (var i = 0; i < Model.AvailableOrganisms.Count; i++)
+                                {
+                                    var org = Model.AvailableOrganisms[i];
+                                    var isChecked = org.Selected || selectedOrganismSet.Contains(org.Value);
+                                    var checkboxId = $"org_check_{i}";
+
+                                    <div class="form-check organism-check-item py-1 border-bottom border-light"
+                                         data-organism-label="@org.Text.ToLowerInvariant()">
+                                        <input type="checkbox"
+                                               class="form-check-input organism-checkbox"
+                                               id="@checkboxId"
+                                               name="SelectedWHONETIDs"
+                                               value="@org.Value"
+                                               checked="@(isChecked ? "checked" : null)" />
+                                        <label class="form-check-label d-block text-break"
+                                               for="@checkboxId"
+                                               style="cursor: pointer;">
+                                            @org.Text
+                                        </label>
+                                    </div>
+                                }
+
+                                <div id="noOrganismMatchMessage"
+                                     class="text-muted small py-3 text-center d-none">
+                                    No matching organisms found.
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Antibiotic Panel & Custom Display Order -->
+            <div class="col-lg-7">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">Worksheet Panel Order</h6>
+                            <small class="text-muted">Drag rows, use arrows, or edit position numbers</small>
+                        </div>
+                        <span class="badge bg-secondary">@Model.Antibiotics.Count configured</span>
+                    </div>
+
+                    <div class="card-body">
+                        <!-- Add Antibiotic to Card -->
+                        <div class="row g-2 align-items-end mb-3">
+                            <div class="col-sm-8">
+                                <label for="newAntibioticCode" class="form-label small fw-semibold">
+                                    Add Antibiotic to Card
+                                </label>
+                                <select id="newAntibioticCode"
+                                        name="newAntibioticCode"
+                                        asp-items="Model.AvailableAntibioticsToAdd"
+                                        class="form-select form-select-sm">
+                                    <option value="">-- Select antibiotic to add --</option>
+                                </select>
+                            </div>
+                            <div class="col-sm-4">
+                                <button type="submit" class="btn btn-sm btn-outline-primary w-100">
+                                    <i class="bi bi-plus-circle me-1"></i>
+                                    Add &amp; Save
+                                </button>
+                            </div>
+                        </div>
+
+                        @if (Model.Antibiotics.Count == 0)
+                        {
+                            <div class="alert alert-light border text-muted mb-0">
+                                No antibiotics are assigned to this card yet. Select one above or assign this card code in the Antibiotics screen.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover align-middle mb-0" id="panelTable">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 36px;"></th>
+                                            <th style="width: 85px;">Position</th>
+                                            <th style="width: 85px;">Move</th>
+                                            <th>Code</th>
+                                            <th>Antibiotic</th>
+                                            <th>Class</th>
+                                            <th class="text-center" style="width: 80px;">Remove</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (var i = 0; i < Model.Antibiotics.Count; i++)
+                                        {
+                                            <tr draggable="true" class="panel-order-row">
+                                                <td class="text-muted text-center drag-handle"
+                                                    style="cursor: grab;"
+                                                    title="Drag to reorder">
+                                                    <i class="bi bi-grip-vertical"></i>
+                                                </td>
+                                                <td>
+                                                    <input type="hidden"
+                                                           asp-for="Antibiotics[i].AntibioticCode" />
+                                                    <input type="hidden"
+                                                           asp-for="Antibiotics[i].AntibioticName" />
+                                                    <input type="hidden"
+                                                           asp-for="Antibiotics[i].AntibioticClassName" />
+                                                    <input asp-for="Antibiotics[i].DisplayOrder"
+                                                           type="number"
+                                                           min="1"
+                                                           class="form-control form-control-sm order-input" />
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group btn-group-sm" role="group">
+                                                        <button type="button"
+                                                                class="btn btn-outline-secondary move-up-btn"
+                                                                title="Move Up">
+                                                            <i class="bi bi-arrow-up"></i>
+                                                        </button>
+                                                        <button type="button"
+                                                                class="btn btn-outline-secondary move-down-btn"
+                                                                title="Move Down">
+                                                            <i class="bi bi-arrow-down"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <strong>@Model.Antibiotics[i].AntibioticCode</strong>
+                                                </td>
+                                                <td>@Model.Antibiotics[i].AntibioticName</td>
+                                                <td class="text-muted small">@Model.Antibiotics[i].AntibioticClassName</td>
+                                                <td class="text-center">
+                                                    <input asp-for="Antibiotics[i].Remove"
+                                                           class="form-check-input" />
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="card-footer bg-white d-flex justify-content-end gap-2">
+                        <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i>
+                            Save Configuration
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts
+{
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        (function () {
+            // =====================================================
+            // Searchable Organism Checklist
+            // =====================================================
+            const searchInput = document.getElementById("organismSearchInput");
+            const clearSearchBtn = document.getElementById("clearOrganismSearchBtn");
+            const selectVisibleBtn = document.getElementById("selectVisibleOrganismsBtn");
+            const clearAllBtn = document.getElementById("clearAllOrganismsBtn");
+            const countBadge = document.getElementById("selectedOrganismCount");
+            const visibleHint = document.getElementById("visibleOrganismHint");
+            const noMatchMessage = document.getElementById("noOrganismMatchMessage");
+            const organismItems = Array.from(document.querySelectorAll(".organism-check-item"));
+            const allCheckboxes = Array.from(document.querySelectorAll(".organism-checkbox"));
+
+            function updateOrganismSummary() {
+                const checkedCount = allCheckboxes.filter(cb => cb.checked).length;
+                if (countBadge) {
+                    countBadge.textContent = `${checkedCount} selected`;
+                }
+            }
+
+            function filterOrganisms() {
+                const term = (searchInput?.value || "").trim().toLowerCase();
+                let visibleCount = 0;
+
+                organismItems.forEach(item => {
+                    const label = item.getAttribute("data-organism-label") || "";
+                    const matches = !term || label.includes(term);
+                    item.classList.toggle("d-none", !matches);
+                    if (matches) {
+                        visibleCount++;
+                    }
+                });
+
+                if (clearSearchBtn) {
+                    clearSearchBtn.classList.toggle("d-none", term.length === 0);
+                }
+
+                if (noMatchMessage) {
+                    noMatchMessage.classList.toggle("d-none", visibleCount > 0 || organismItems.length === 0);
+                }
+
+                if (visibleHint) {
+                    visibleHint.textContent = term
+                        ? `Showing ${visibleCount} of ${organismItems.length}`
+                        : `${organismItems.length} total`;
+                }
+            }
+
+            searchInput?.addEventListener("input", filterOrganisms);
+
+            clearSearchBtn?.addEventListener("click", function () {
+                if (searchInput) {
+                    searchInput.value = "";
+                    filterOrganisms();
+                    searchInput.focus();
+                }
+            });
+
+            selectVisibleBtn?.addEventListener("click", function () {
+                organismItems.forEach(item => {
+                    if (!item.classList.contains("d-none")) {
+                        const cb = item.querySelector(".organism-checkbox");
+                        if (cb) cb.checked = true;
+                    }
+                });
+                updateOrganismSummary();
+            });
+
+            clearAllBtn?.addEventListener("click", function () {
+                allCheckboxes.forEach(cb => {
+                    cb.checked = false;
+                });
+                updateOrganismSummary();
+            });
+
+            allCheckboxes.forEach(cb => {
+                cb.addEventListener("change", updateOrganismSummary);
+            });
+
+            filterOrganisms();
+            updateOrganismSummary();
+
+            // =====================================================
+            // Custom Panel Ordering (Arrows, Numeric Input, Drag & Drop)
+            // =====================================================
+            const tbody = document.querySelector("#panelTable tbody");
+            const form = document.getElementById("astCardForm");
+            if (!tbody) return;
+
+            function syncRowIndexesAndNumbers() {
+                const rows = Array.from(tbody.querySelectorAll("tr"));
+                rows.forEach((row, index) => {
+                    const orderInput = row.querySelector(".order-input");
+                    if (orderInput) {
+                        orderInput.value = index + 1;
+                    }
+                    row.querySelectorAll("input").forEach(input => {
+                        if (input.name) {
+                            input.name = input.name.replace(/Antibiotics\[\d+\]/, `Antibiotics[${index}]`);
+                        }
+                        if (input.id) {
+                            input.id = input.id.replace(/Antibiotics_\d+__/, `Antibiotics_${index}__`);
+                        }
+                    });
+                });
+            }
+
+            function sortRowsByTypedOrder(changedInput) {
+                const rows = Array.from(tbody.querySelectorAll("tr"));
+                const targetRow = changedInput?.closest("tr");
+
+                rows.sort((a, b) => {
+                    const valA = parseInt(a.querySelector(".order-input")?.value || "999", 10);
+                    const valB = parseInt(b.querySelector(".order-input")?.value || "999", 10);
+                    if (valA !== valB) return valA - valB;
+                    if (a === targetRow) return -1;
+                    if (b === targetRow) return 1;
+                    return 0;
+                });
+
+                rows.forEach(row => tbody.appendChild(row));
+                syncRowIndexesAndNumbers();
+            }
+
+            // Up / Down arrow buttons
+            tbody.addEventListener("click", function (e) {
+                const upBtn = e.target.closest(".move-up-btn");
+                const downBtn = e.target.closest(".move-down-btn");
+                if (!upBtn && !downBtn) return;
+
+                const row = e.target.closest("tr");
+                if (!row) return;
+
+                if (upBtn && row.previousElementSibling) {
+                    tbody.insertBefore(row, row.previousElementSibling);
+                    syncRowIndexesAndNumbers();
+                } else if (downBtn && row.nextElementSibling) {
+                    tbody.insertBefore(row.nextElementSibling, row);
+                    syncRowIndexesAndNumbers();
+                }
+            });
+
+            // Typing a new number directly into Position input
+            tbody.addEventListener("change", function (e) {
+                const orderInput = e.target.closest(".order-input");
+                if (orderInput) {
+                    sortRowsByTypedOrder(orderInput);
+                }
+            });
+
+            // Drag and drop reordering
+            let draggedRow = null;
+
+            tbody.addEventListener("dragstart", function (e) {
+                const row = e.target.closest("tr");
+                if (!row) return;
+                draggedRow = row;
+                row.classList.add("table-active");
+                e.dataTransfer.effectAllowed = "move";
+            });
+
+            tbody.addEventListener("dragover", function (e) {
+                e.preventDefault();
+                const targetRow = e.target.closest("tr");
+                if (!draggedRow || !targetRow || draggedRow === targetRow) return;
+
+                const rect = targetRow.getBoundingClientRect();
+                const after = (e.clientY - rect.top) > (rect.height / 2);
+                tbody.insertBefore(draggedRow, after ? targetRow.nextSibling : targetRow);
+            });
+
+            tbody.addEventListener("dragend", function () {
+                if (draggedRow) {
+                    draggedRow.classList.remove("table-active");
+                    draggedRow = null;
+                    syncRowIndexesAndNumbers();
+                }
+            });
+
+            // Ensure sequential 1..N before submit
+            form?.addEventListener("submit", function () {
+                syncRowIndexesAndNumbers();
+            });
+        })();
+    </script>
+}

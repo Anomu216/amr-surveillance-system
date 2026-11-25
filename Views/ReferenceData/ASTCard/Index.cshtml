@@ -1,0 +1,293 @@
+﻿@model IEnumerable<AMRSurveillance.ViewModels.ASTCardListItemViewModel>
+
+@{
+    ViewData["Title"] = "AST Cards";
+}
+
+<style>
+    .reference-page {
+        min-width: 0;
+        overflow-x: clip;
+    }
+
+    .astcard-header-actions {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        flex-shrink: 0;
+    }
+
+        .astcard-header-actions .btn {
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+    .reference-table .card-code-column {
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .reference-table .status-column {
+        white-space: nowrap;
+        text-align: center;
+    }
+
+    .reference-table thead th.status-column {
+        text-align: center;
+    }
+
+    .reference-table .actions-column {
+        width: 100px;
+        min-width: 100px;
+        white-space: nowrap;
+    }
+</style>
+
+<div class="container-fluid reference-page py-2">
+
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-start align-items-md-center mb-3 flex-wrap gap-3">
+        <div class="min-w-0">
+            <h2 class="mb-1 text-break">AST Cards</h2>
+            <p class="text-muted mb-0">
+                Manage AST cards, mapped organisms, and antibiotic panel display order.
+            </p>
+        </div>
+
+        <div class="astcard-header-actions">
+            <a asp-controller="ReferenceData"
+               asp-action="Index"
+               class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>
+                <span>Back</span>
+            </a>
+
+            <a asp-controller="Antibiotic"
+               asp-action="Index"
+               class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-capsule me-1"></i>
+                <span>Antibiotics</span>
+            </a>
+
+            <a asp-action="Create"
+               class="btn btn-sm btn-primary">
+                <i class="bi bi-plus-lg me-1"></i>
+                <span>New AST Card</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Success Message -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show"
+             role="alert">
+            @TempData["Success"]
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Close">
+            </button>
+        </div>
+    }
+
+    <!-- Error Message -->
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show"
+             role="alert">
+            @TempData["Error"]
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Close">
+            </button>
+        </div>
+    }
+
+    <!-- Search -->
+    <div class="row g-2 mb-3">
+        <div class="col-12 col-sm-8 col-md-6 col-lg-5">
+            <input type="text"
+                   id="searchInput"
+                   class="form-control form-control-sm"
+                   placeholder="Search AST cards by code, description, or mapped organism..."
+                   aria-label="Search AST cards" />
+        </div>
+    </div>
+
+    <!-- AST Card Table -->
+    <div class="reference-table-wrapper">
+        <table class="table table-hover align-middle reference-table"
+               id="astCardTable">
+            <thead>
+                <tr>
+                    <th class="card-code-column">AST Card</th>
+                    <th>Description</th>
+                    <th>Mapped Organisms</th>
+                    <th class="status-column">Panel Antibiotics</th>
+                    <th class="status-column">Status</th>
+                    <th class="actions-column">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr class="astcard-data-row">
+                        <td class="card-code-column">
+                            <strong>@item.ASTCard</strong>
+                        </td>
+
+                        <td>
+                            @(string.IsNullOrWhiteSpace(item.Description) ? "—" : item.Description)
+                        </td>
+
+                        <td>
+                            @if (item.MappedOrganisms.Count == 0)
+                            {
+                                <span class="text-muted small">All organisms (unrestricted)</span>
+                            }
+                            else
+                            {
+                                <div class="d-flex flex-wrap gap-1">
+                                    @foreach (var org in item.MappedOrganisms)
+                                    {
+                                        <span class="badge bg-light text-dark border">@org</span>
+                                    }
+                                </div>
+                            }
+                        </td>
+
+                        <td class="status-column">
+                            <span class="badge bg-info text-dark">@item.AntibioticCount</span>
+                        </td>
+
+                        <td class="status-column">
+                            @if (item.IsActive)
+                            {
+                                <span class="badge bg-success">Active</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Inactive</span>
+                            }
+                        </td>
+
+                        <td class="actions-column">
+                            <div class="reference-actions">
+                                <a asp-action="Edit"
+                                   asp-route-id="@item.ASTCard"
+                                   class="btn btn-sm btn-outline-primary"
+                                   title="Configure Card"
+                                   aria-label="Configure @item.ASTCard">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-danger"
+                                        title="Delete"
+                                        aria-label="Delete @item.ASTCard"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#deleteModal"
+                                        data-card-code="@item.ASTCard"
+                                        data-card-desc="@item.Description">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+
+                <tr id="noSearchResultsRow" class="d-none">
+                    <td colspan="6" class="text-center text-muted py-4">
+                        No matching AST cards found.
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade"
+     id="deleteModal"
+     tabindex="-1"
+     aria-labelledby="deleteModalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close">
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-1">Are you sure you want to delete AST Card:</p>
+                <p class="fw-bold mb-0 text-break" id="deleteCardName"></p>
+                <p class="text-muted small mt-2 mb-0">
+                    This removes its organism mappings and panel order configuration.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button"
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                    Cancel
+                </button>
+                <form asp-action="Delete"
+                      method="post"
+                      class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" id="deleteCardCode" />
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i>
+                        <span>Delete</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts
+{
+    <script>
+        document.getElementById("searchInput")
+            ?.addEventListener("input", function () {
+                const searchValue = this.value.trim().toLowerCase();
+                const rows = document.querySelectorAll("#astCardTable tbody tr.astcard-data-row");
+                const emptyRow = document.getElementById("noSearchResultsRow");
+                let visibleCount = 0;
+
+                rows.forEach(function (row) {
+                    const text = row.textContent.toLowerCase();
+                    const matches = text.includes(searchValue);
+                    row.style.display = matches ? "" : "none";
+                    if (matches) {
+                        visibleCount++;
+                    }
+                });
+
+                if (emptyRow) {
+                    emptyRow.classList.toggle("d-none", visibleCount > 0 || rows.length === 0);
+                }
+            });
+
+        const deleteModal = document.getElementById("deleteModal");
+        deleteModal?.addEventListener("show.bs.modal", function (event) {
+            const button = event.relatedTarget;
+            if (!button) return;
+
+            const cardCode = button.getAttribute("data-card-code") || "";
+            const cardDesc = button.getAttribute("data-card-desc") || "";
+
+            document.getElementById("deleteCardCode").value = cardCode;
+            document.getElementById("deleteCardName").textContent =
+                cardCode + (cardDesc ? " — " + cardDesc : "");
+        });
+    </script>
+}

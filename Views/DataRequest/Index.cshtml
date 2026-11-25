@@ -1,0 +1,1197 @@
+﻿@using System.Text.Json
+@model AMRSurveillance.ViewModels.DataRequests.DataRequestViewModel
+
+@{
+    ViewData["Title"] = "Data Request & Export";
+
+    var hasValidationResults =
+        Model.IdentifierValidationResults?.Any() == true;
+
+    var hasValidationErrors =
+        Model.HasIdentifierValidationErrors;
+
+    var hasMissingIdentifiers =
+        Model.MissingIdentifierCount > 0;
+
+    var astCardMapJson = JsonSerializer.Serialize(
+        Model.AstCardAntibiotics ?? new Dictionary<string, List<string>>());
+}
+
+<div class="container-fluid py-4">
+
+    <!-- ========================================================= -->
+    <!-- PAGE HEADER                                               -->
+    <!-- ========================================================= -->
+
+    <div class="page-header d-flex flex-column flex-md-row
+            justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h2 class="mb-1">
+                <i class="bi bi-file-earmark-arrow-down me-2"></i>
+                Data Request &amp; Export
+            </h2>
+
+            <p class="text-muted mb-0">
+                Select the data and variables you require, apply filters,
+                and submit your request for review and approval.
+            </p>
+        </div>
+
+        <a asp-action="MyRequests"
+           class="btn btn-outline-primary page-action-button">
+            <i class="bi bi-clock-history me-1"></i>
+            <span>My Requests</span>
+        </a>
+    </div>
+
+
+    <!-- ========================================================= -->
+    <!-- ALERTS                                                    -->
+    <!-- ========================================================= -->
+    @if (!string.IsNullOrWhiteSpace(Model.SuccessMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show"
+             role="alert">
+
+            <i class="bi bi-check-circle me-2"></i>
+            @Model.SuccessMessage
+
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Close">
+            </button>
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show"
+             role="alert">
+
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            @Model.ErrorMessage
+
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Close">
+            </button>
+        </div>
+    }
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger">
+            <div asp-validation-summary="All"></div>
+        </div>
+    }
+
+
+    <!-- ========================================================= -->
+    <!-- MAIN FORM                                                 -->
+    <!-- ========================================================= -->
+
+    <form id="dataRequestForm"
+          asp-action="Submit"
+          method="post"
+          enctype="multipart/form-data">
+
+        @Html.AntiForgeryToken()
+
+        <!-- ===================================================== -->
+        <!-- REQUEST REASON                                        -->
+        <!-- ===================================================== -->
+
+        <div class="card shadow-sm mb-4">
+
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-chat-left-text me-2"></i>
+                    Request Details
+                </h5>
+            </div>
+
+            <div class="card-body">
+
+                <label asp-for="Reason"
+                       class="form-label fw-semibold">
+                    Reason for Request
+                </label>
+
+                <textarea asp-for="Reason"
+                          class="form-control"
+                          rows="3"
+                          maxlength="1000"
+                          placeholder="Briefly describe why you require this data...">
+                </textarea>
+
+                <span asp-validation-for="Reason"
+                      class="text-danger">
+                </span>
+
+            </div>
+        </div>
+
+
+        <!-- ===================================================== -->
+        <!-- DATA SELECTION                                        -->
+        <!-- ===================================================== -->
+
+        <div class="card shadow-sm mb-4">
+
+            <div class="card-header bg-white d-flex
+                        justify-content-between align-items-center">
+
+                <div>
+                    <h5 class="mb-0">
+                        <i class="bi bi-table me-2"></i>
+                        Select Data and Variables
+                    </h5>
+
+                    <small class="text-muted">
+                        Select the datasets and individual columns you
+                        would like included in your request.
+                    </small>
+                </div>
+
+            </div>
+
+            <div class="card-body">
+
+                @if (Model.AvailableDatasets.Any())
+                {
+                    <div class="accordion"
+                         id="datasetAccordion"
+                         data-ast-cards="@astCardMapJson">
+
+                        @for (var datasetIndex = 0;
+                                            datasetIndex < Model.AvailableDatasets.Count;
+                                            datasetIndex++)
+                        {
+                            var dataset =
+                            Model.AvailableDatasets[datasetIndex];
+
+                            var collapseId =
+                            $"datasetCollapse{datasetIndex}";
+
+                            var headingId =
+                            $"datasetHeading{datasetIndex}";
+
+                            var astDropdownId =
+                            $"astPanelOptions{datasetIndex}";
+
+                            var isWorksheetDataset =
+                            dataset.Value.Contains("Worksheet", StringComparison.OrdinalIgnoreCase) ||
+                            dataset.Name.Contains("Worksheet", StringComparison.OrdinalIgnoreCase);
+
+                            var initialSelectedCount =
+                            dataset.Columns.Count(c => c.IsSelected);
+
+                            <div class="accordion-item dataset-panel"
+                                 data-dataset-index="@datasetIndex">
+
+                                <h2 class="accordion-header"
+                                    id="@headingId">
+
+                                    <button class="accordion-button collapsed"
+                                            type="button"
+                                            data-bs-toggle="collapse"
+                                            data-bs-target="#@collapseId"
+                                            aria-expanded="false"
+                                            aria-controls="@collapseId">
+
+                                        <strong>@dataset.Name</strong>
+
+                                        <span class="text-muted ms-2">
+                                            (@dataset.Columns.Count columns)
+                                        </span>
+
+                                        <span class="badge bg-primary ms-2 dataset-selected-badge @(initialSelectedCount == 0 ? "d-none" : "")">
+                                            @initialSelectedCount selected
+                                        </span>
+
+                                    </button>
+
+                                </h2>
+
+                                <div id="@collapseId"
+                                     class="accordion-collapse collapse"
+                                     aria-labelledby="@headingId"
+                                     data-bs-parent="#datasetAccordion">
+
+                                    <div class="accordion-body">
+
+                                        <!-- Preserve dataset value -->
+                                        <input type="hidden"
+                                               asp-for="AvailableDatasets[datasetIndex].Name" />
+
+                                        <input type="hidden"
+                                               asp-for="AvailableDatasets[datasetIndex].Value" />
+
+                                        @if (dataset.Columns.Any())
+                                        {
+                                            <!-- ===================================== -->
+                                            <!-- DATASET TOOLBAR: SEARCH / SELECT ALL  -->
+                                            <!-- ===================================== -->
+                                            <div class="row g-2 align-items-center bg-light border rounded p-2 mb-3">
+
+                                                <div class="col-12 col-md-4">
+                                                    <div class="input-group input-group-sm">
+                                                        <span class="input-group-text bg-white">
+                                                            <i class="bi bi-search"></i>
+                                                        </span>
+                                                        <input type="text"
+                                                               class="form-control dataset-column-search"
+                                                               placeholder="Search @dataset.Name columns..." />
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-12 col-md-auto d-flex gap-2">
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-outline-primary dataset-select-all">
+                                                        <i class="bi bi-check2-all me-1"></i>Select All
+                                                    </button>
+
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-outline-secondary dataset-clear-all">
+                                                        <i class="bi bi-x-lg me-1"></i>Clear
+                                                    </button>
+                                                </div>
+
+                                                @if (isWorksheetDataset && Model.AstCardAntibiotics?.Any() == true)
+                                                {
+                                                    <div class="col-12 col-md-5 ms-md-auto">
+                                                        <div class="d-flex gap-2 align-items-stretch">
+                                                            <div class="filter-multiselect ast-panel-multiselect flex-grow-1"
+                                                                 data-default-label="Select AST Panels...">
+                                                                <button type="button"
+                                                                        class="form-select form-select-sm text-start filter-multiselect-toggle"
+                                                                        data-target="@astDropdownId">
+                                                                    <span class="filter-multiselect-label">
+                                                                        Select AST Panels...
+                                                                    </span>
+                                                                </button>
+
+                                                                <div id="@astDropdownId"
+                                                                     class="filter-multiselect-options d-none">
+                                                                    <input type="text"
+                                                                           class="form-control form-control-sm filter-multiselect-search"
+                                                                           placeholder="Search AST cards (e.g., GN83)..." />
+
+                                                                    <div class="filter-multiselect-list">
+                                                                        @foreach (var card in Model.AstCardAntibiotics.Keys)
+                                                                        {
+                                                                            <label class="form-check filter-multiselect-item">
+                                                                                <input type="checkbox"
+                                                                                       value="@card"
+                                                                                       class="form-check-input filter-multiselect-checkbox ast-card-checkbox" />
+                                                                                <span class="form-check-label">
+                                                                                    @card (@Model.AstCardAntibiotics[card].Count antibiotics)
+                                                                                </span>
+                                                                            </label>
+                                                                        }
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <button type="button"
+                                                                    class="btn btn-sm btn-outline-success text-nowrap ast-card-select-btn">
+                                                                Select Panels
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                }
+
+                                            </div>
+
+                                            <div class="row dataset-columns-grid">
+
+                                                @for (var columnIndex = 0;
+                                                                                    columnIndex < dataset.Columns.Count;
+                                                                                    columnIndex++)
+                                                {
+                                                    var colVal = dataset.Columns[columnIndex].Value;
+                                                    var colText = dataset.Columns[columnIndex].Text;
+
+                                                    <div class="col-md-4 col-lg-3 mb-2 dataset-column-item"
+                                                         data-col-value="@colVal"
+                                                         data-col-text="@colText">
+
+                                                        <div class="form-check dynamic-column-check">
+
+                                                            <!-- Preserve actual database column name -->
+                                                            <input type="hidden"
+                                                                   asp-for="AvailableDatasets[datasetIndex].Columns[columnIndex].Value" />
+
+                                                            <!-- Preserve display name -->
+                                                            <input type="hidden"
+                                                                   asp-for="AvailableDatasets[datasetIndex].Columns[columnIndex].Text" />
+
+                                                            <input asp-for="AvailableDatasets[datasetIndex].Columns[columnIndex].IsSelected"
+                                                                   class="form-check-input data-column-checkbox" />
+
+                                                            <label asp-for="AvailableDatasets[datasetIndex].Columns[columnIndex].IsSelected"
+                                                                   class="form-check-label dynamic-column-name">
+
+                                                                @colText
+
+                                                            </label>
+
+                                                        </div>
+
+                                                    </div>
+                                                }
+
+                                            </div>
+
+                                            <div class="text-muted small text-center py-2 d-none dataset-no-matches">
+                                                No columns match your search term.
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <p class="text-muted mb-0">
+                                                No columns are currently
+                                                available for this dataset.
+                                            </p>
+                                        }
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+                        }
+
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-warning mb-0">
+                        No datasets are currently available.
+                    </div>
+                }
+
+            </div>
+        </div>
+
+
+        <!-- ===================================================== -->
+        <!-- FILTERS                                               -->
+        <!-- ===================================================== -->
+
+        <div class="card shadow-sm mb-4">
+
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-funnel me-2"></i>
+                    Optional Filters
+                </h5>
+            </div>
+
+            <div class="card-body">
+
+                <div class="row">
+
+                    <!-- Start Date -->
+                    <div class="col-md-3 mb-3">
+
+                        <label asp-for="StartDate"
+                               class="form-label">
+                            Start Date
+                        </label>
+
+                        <input asp-for="StartDate"
+                               type="date"
+                               class="form-control" />
+
+                    </div>
+
+
+                    <!-- End Date -->
+                    <div class="col-md-3 mb-3">
+
+                        <label asp-for="EndDate"
+                               class="form-label">
+                            End Date
+                        </label>
+
+                        <input asp-for="EndDate"
+                               type="date"
+                               class="form-control" />
+
+                    </div>
+
+
+                    <!-- Facilities -->
+                    <div class="col-md-3 mb-3">
+
+                        <label class="form-label">
+                            Facilities
+                        </label>
+
+                        <div class="filter-multiselect"
+                             data-default-label="All facilities">
+
+                            <button type="button"
+                                    class="form-select text-start filter-multiselect-toggle"
+                                    data-target="facilityFilterOptions">
+                                <span class="filter-multiselect-label">
+                                    All facilities
+                                </span>
+                            </button>
+
+                            <div id="facilityFilterOptions"
+                                 class="filter-multiselect-options d-none">
+
+                                <input type="text"
+                                       class="form-control form-control-sm filter-multiselect-search"
+                                       placeholder="Search facilities..." />
+
+                                <div class="filter-multiselect-list">
+
+                                    @foreach (var facility in Model.Facilities)
+                                    {
+                                        var isSelected =
+                                        Model.FacilityIDs.Contains(facility.Value);
+
+                                        <label class="form-check filter-multiselect-item">
+
+                                            <input type="checkbox"
+                                                   name="FacilityIDs"
+                                                   value="@facility.Value"
+                                                   class="form-check-input filter-multiselect-checkbox"
+                                                   checked="@isSelected" />
+
+                                            <span class="form-check-label">
+                                                @facility.Text
+                                            </span>
+
+                                        </label>
+                                    }
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <small class="text-muted">
+                            Leave unselected to include all facilities.
+                        </small>
+
+                    </div>
+
+
+                    <!-- Organisms -->
+                    <div class="col-md-3 mb-3">
+
+                        <label class="form-label">
+                            Organisms
+                        </label>
+
+                        <div class="filter-multiselect"
+                             data-default-label="All organisms">
+
+                            <button type="button"
+                                    class="form-select text-start filter-multiselect-toggle"
+                                    data-target="organismFilterOptions">
+                                <span class="filter-multiselect-label">
+                                    All organisms
+                                </span>
+                            </button>
+
+                            <div id="organismFilterOptions"
+                                 class="filter-multiselect-options d-none">
+
+                                <input type="text"
+                                       class="form-control form-control-sm filter-multiselect-search"
+                                       placeholder="Search organisms..." />
+
+                                <div class="filter-multiselect-list">
+
+                                    @foreach (var organism in Model.Organisms)
+                                    {
+                                        var isSelected =
+                                        Model.OrganismIDs.Contains(organism.Value);
+
+                                        <label class="form-check filter-multiselect-item">
+
+                                            <input type="checkbox"
+                                                   name="OrganismIDs"
+                                                   value="@organism.Value"
+                                                   class="form-check-input filter-multiselect-checkbox"
+                                                   checked="@isSelected" />
+
+                                            <span class="form-check-label">
+                                                @organism.Text
+                                            </span>
+
+                                        </label>
+                                    }
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <small class="text-muted">
+                            Leave unselected to include all organisms.
+                        </small>
+
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+
+
+        <!-- ===================================================== -->
+        <!-- IDENTIFIER UPLOAD                                     -->
+        <!-- ===================================================== -->
+
+        <div class="card shadow-sm mb-4" id="identifierUploadCard">
+
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-upload me-2"></i>
+                    Request by Identifier List
+                </h5>
+            </div>
+
+            <div class="card-body">
+
+                <p class="text-muted">
+                    Optionally upload an Excel file containing identifiers
+                    to request data for specific records. Select the
+                    identifier type represented in the file and click
+                    <strong>Validate IDs</strong> before submitting.
+                </p>
+
+                <!-- Client-side warning if user tries to submit without validating uploaded IDs -->
+                <div id="idValidationWarning" class="alert alert-warning d-none" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <strong>Validation Required:</strong>
+                    <span>
+                        You have selected an identifier type or attached an Excel file that has not been validated yet.
+                        Please click <strong>Validate IDs</strong> first so your export is restricted strictly to your requested identifiers.
+                    </span>
+                </div>
+
+                <div class="row">
+
+                    <!-- Identifier Type -->
+                    <div class="col-12 col-md-4 col-lg-3 mb-3">
+
+                        <label asp-for="IdentifierType"
+                               class="form-label">
+                            Identifier Type
+                        </label>
+
+                        <select asp-for="IdentifierType"
+                                class="form-select">
+
+                            <option value="">
+                                -- Select Identifier Type --
+                            </option>
+
+                            @foreach (var identifierType
+                                                        in Model.IdentifierTypes)
+                            {
+                                <option value="@identifierType.Value">
+                                    @identifierType.Text
+                                </option>
+                            }
+
+                        </select>
+
+                    </div>
+
+
+                    <!-- Excel File -->
+                    <div class="col-12 col-md-8 col-lg-7 mb-3">
+
+                        <label asp-for="IdentifierFile"
+                               class="form-label">
+                            Excel Identifier File
+                        </label>
+
+                        <input asp-for="IdentifierFile"
+                               type="file"
+                               class="form-control"
+                               accept=".xlsx,.xls" />
+
+                        <small class="text-muted">
+                            Upload an Excel file containing one identifier
+                            column.
+                        </small>
+
+                    </div>
+
+
+                    <!-- Validate Button -->
+                    <div class="col-12 col-md-3 col-lg-2 mb-3 d-flex align-items-end">
+
+                        <button type="submit"
+                                id="validateIdsButton"
+                                class="btn btn-outline-primary w-100 responsive-action-button text-nowrap"
+                                formaction="@Url.Action("ValidateIdentifiers", "DataRequest")">
+
+                            <i class="bi bi-check-circle me-1"></i>
+                            <span>Validate IDs</span>
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <!-- ================================================= -->
+                <!-- VALIDATION RESULTS                                -->
+                <!-- ================================================= -->
+                @if (hasValidationResults)
+                {
+                    @if (hasValidationErrors)
+                    {
+                        <div class="alert alert-danger">
+
+                            <strong>
+                                <i class="bi bi-x-circle me-1"></i>
+                                Validation Errors
+                            </strong>
+
+                            <p class="mb-0 mt-1">
+                                @Model.InvalidIdentifierCount identifier(s)
+                                have an invalid format. Correct the source
+                                file and validate it again before submitting
+                                the request.
+                            </p>
+
+                        </div>
+                    }
+
+                    @if (hasMissingIdentifiers)
+                    {
+                        <div class="alert alert-warning">
+
+                            <strong>
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                Identifiers Not Found
+                            </strong>
+
+                            <p class="mb-0 mt-1">
+                                @Model.MissingIdentifierCount identifier(s)
+                                have valid formats but were not found in the
+                                database. You may still submit the request.
+                            </p>
+
+                        </div>
+                    }
+
+                    <div id="validationResultsContainer" class="table-responsive">
+
+                        <table class="table table-sm
+                                          table-bordered align-middle">
+
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Identifier</th>
+                                    <th>Format</th>
+                                    <th>Database Status</th>
+                                    <th>Relationships</th>
+                                    <th>Message</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+
+                                @if (Model.IdentifierValidationResults != null)
+                                {
+                                    foreach (var result in Model.IdentifierValidationResults)
+                                    {
+                                        <tr>
+
+                                            <td>
+                                                <code>@result.Identifier</code>
+                                            </td>
+
+                                            <td>
+
+                                                @if (result.IsPatternValid)
+                                                {
+                                                    <span class="badge bg-success">
+                                                        Valid
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-danger">
+                                                        Invalid
+                                                    </span>
+                                                }
+
+                                            </td>
+
+                                            <td>
+
+                                                @if (!result.IsPatternValid)
+                                                {
+                                                    <span class="text-muted">
+                                                        Not checked
+                                                    </span>
+                                                }
+                                                else if (result.ExistsInDatabase)
+                                                {
+                                                    <span class="badge bg-success">
+                                                        Found
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning text-dark">
+                                                        Not Found
+                                                    </span>
+                                                }
+
+                                            </td>
+
+                                            <td>
+
+                                                @if (result.CanResolveRelationships)
+                                                {
+                                                    <span class="badge bg-info text-dark">
+                                                        Available
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">
+                                                        Not available
+                                                    </span>
+                                                }
+
+                                            </td>
+
+                                            <td>
+                                                @result.Message
+                                            </td>
+
+                                        </tr>
+                                    }
+                                }
+
+                            </tbody>
+                        </table>
+
+                    </div>
+
+
+                    <!-- ============================================= -->
+                    <!-- PRESERVE VALIDATION RESULTS FOR SUBMISSION    -->
+                    <!-- ============================================= -->
+                    <div id="hiddenValidationInputs">
+                        @if (Model.IdentifierValidationResults != null)
+                        {
+                            for (var i = 0;
+                            i < Model.IdentifierValidationResults.Count;
+                            i++)
+                            {
+                                <input type="hidden"
+                                       asp-for="IdentifierValidationResults[i].Identifier" />
+
+                                <input type="hidden"
+                                       asp-for="IdentifierValidationResults[i].IsPatternValid" />
+
+                                <input type="hidden"
+                                       asp-for="IdentifierValidationResults[i].ExistsInDatabase" />
+
+                                <input type="hidden"
+                                       asp-for="IdentifierValidationResults[i].CanResolveRelationships" />
+
+                                <input type="hidden"
+                                       asp-for="IdentifierValidationResults[i].Message" />
+                            }
+                        }
+                    </div>
+                }
+
+            </div>
+        </div>
+
+
+        <!-- ===================================================== -->
+        <!-- SUBMIT                                                 -->
+        <!-- ===================================================== -->
+
+        <div class="card shadow-sm mb-4">
+
+            <div class="card-body submit-request-container
+                d-flex flex-column flex-md-row
+                justify-content-between
+                align-items-md-center gap-3">
+
+                <div>
+
+                    <h6 class="mb-1">
+                        Ready to Submit?
+                    </h6>
+
+                    <small class="text-muted">
+                        Your request will be submitted for review and
+                        approval. Approved requests will be made available
+                        for Excel download.
+                    </small>
+
+                </div>
+
+                <button type="submit"
+                        id="submitRequestButton"
+                        class="btn btn-primary submit-request-button text-nowrap"
+                        @(hasValidationErrors ? "disabled" : null)>
+
+                    <i class="bi bi-send me-1"></i>
+                    <span>Submit Request</span>
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </form>
+
+</div>
+
+<!-- ============================================================
+     PAGE-SPECIFIC STYLES
+     ============================================================ -->
+
+<style>
+    .page-action-button,
+    .responsive-action-button,
+    .submit-request-button {
+        white-space: nowrap;
+    }
+
+    .page-action-button {
+        min-width: 140px;
+    }
+
+    .submit-request-button {
+        min-width: 170px;
+    }
+
+    .dynamic-column-check {
+        display: flex;
+        align-items: flex-start;
+        min-width: 0;
+    }
+
+        .dynamic-column-check .form-check-input {
+            flex-shrink: 0;
+            margin-top: 0.3rem;
+        }
+
+    .dynamic-column-name {
+        flex: 1;
+        min-width: 0;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+    @@media (max-width: 767.98px) {
+        .page-action-button,
+        .responsive-action-button,
+        .submit-request-button {
+            width: 100%;
+        }
+    }
+</style>
+
+
+@section Scripts
+{
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const accordionEl = document.getElementById("datasetAccordion");
+            const astCardAntibiotics = accordionEl && accordionEl.dataset.astCards
+                ? JSON.parse(accordionEl.dataset.astCards)
+                : {};
+
+            // ---------------------------------------------------------
+            // Dataset Search, Select All, Clear, and Multi-AST Panel Select
+            // ---------------------------------------------------------
+            document.querySelectorAll(".dataset-panel").forEach(function (panel) {
+                const searchInput = panel.querySelector(".dataset-column-search");
+                const selectAllBtn = panel.querySelector(".dataset-select-all");
+                const clearAllBtn = panel.querySelector(".dataset-clear-all");
+                const badge = panel.querySelector(".dataset-selected-badge");
+                const noMatchesMsg = panel.querySelector(".dataset-no-matches");
+                const columnItems = Array.from(panel.querySelectorAll(".dataset-column-item"));
+                const checkboxes = Array.from(panel.querySelectorAll(".data-column-checkbox"));
+
+                function updateSelectedBadge() {
+                    if (!badge) return;
+                    const count = checkboxes.filter(cb => cb.checked).length;
+                    if (count > 0) {
+                        badge.textContent = `${count} selected`;
+                        badge.classList.remove("d-none");
+                    } else {
+                        badge.classList.add("d-none");
+                    }
+                }
+
+                // Live column search
+                searchInput?.addEventListener("input", function () {
+                    const term = searchInput.value.toLowerCase().trim();
+                    let visibleCount = 0;
+
+                    columnItems.forEach(function (item) {
+                        const val = (item.dataset.colValue || "").toLowerCase();
+                        const text = (item.dataset.colText || "").toLowerCase();
+                        const matches = !term || val.includes(term) || text.includes(term);
+
+                        item.classList.toggle("d-none", !matches);
+                        if (matches) visibleCount++;
+                    });
+
+                    noMatchesMsg?.classList.toggle("d-none", visibleCount > 0);
+                });
+
+                // Select All (applies to currently visible/filtered columns)
+                selectAllBtn?.addEventListener("click", function () {
+                    columnItems.forEach(function (item) {
+                        if (!item.classList.contains("d-none")) {
+                            const cb = item.querySelector(".data-column-checkbox");
+                            if (cb) cb.checked = true;
+                        }
+                    });
+                    updateSelectedBadge();
+                });
+
+                // Clear All (applies to currently visible/filtered columns)
+                clearAllBtn?.addEventListener("click", function () {
+                    columnItems.forEach(function (item) {
+                        if (!item.classList.contains("d-none")) {
+                            const cb = item.querySelector(".data-column-checkbox");
+                            if (cb) cb.checked = false;
+                        }
+                    });
+                    updateSelectedBadge();
+                });
+
+                // Multi-AST Card Panel Selection
+                const astSelectBtn = panel.querySelector(".ast-card-select-btn");
+
+                astSelectBtn?.addEventListener("click", function () {
+                    const selectedCards = Array.from(
+                        panel.querySelectorAll(".ast-card-checkbox:checked")
+                    ).map(cb => cb.value);
+
+                    if (selectedCards.length === 0) {
+                        alert("Please check at least one AST card panel first.");
+                        return;
+                    }
+
+                    const targetCodeSet = new Set();
+                    selectedCards.forEach(card => {
+                        (astCardAntibiotics[card] || []).forEach(code => {
+                            targetCodeSet.add(code.toUpperCase());
+                        });
+                    });
+
+                    if (targetCodeSet.size === 0) {
+                        return;
+                    }
+
+                    columnItems.forEach(function (item) {
+                        const rawVal = (item.dataset.colValue || "").toUpperCase();
+                        const cb = item.querySelector(".data-column-checkbox");
+                        if (!cb) return;
+
+                        for (const code of targetCodeSet) {
+                            if (rawVal === code || rawVal.startsWith(code + "_")) {
+                                cb.checked = true;
+                                break;
+                            }
+                        }
+                    });
+
+                    // Close the AST dropdown after applying selection
+                    panel.querySelectorAll(".filter-multiselect-options").forEach(opt => {
+                        opt.classList.add("d-none");
+                    });
+
+                    updateSelectedBadge();
+                });
+
+                checkboxes.forEach(cb => cb.addEventListener("change", updateSelectedBadge));
+                updateSelectedBadge();
+            });
+
+            // ---------------------------------------------------------
+            // Date Range Check
+            // ---------------------------------------------------------
+            const startDate = document.getElementById("StartDate");
+            const endDate = document.getElementById("EndDate");
+
+            if (startDate && endDate) {
+                endDate.addEventListener("change", function () {
+                    if (startDate.value &&
+                        endDate.value &&
+                        endDate.value < startDate.value) {
+
+                        alert("End date cannot be earlier than start date.");
+                        endDate.value = "";
+                    }
+                });
+            }
+
+            // ---------------------------------------------------------
+            // Unvalidated Identifier Upload Guard
+            // ---------------------------------------------------------
+            const form = document.getElementById("dataRequestForm");
+            const idTypeSelect = document.getElementById("IdentifierType");
+            const idFileInput = document.getElementById("IdentifierFile");
+            const warningBanner = document.getElementById("idValidationWarning");
+            const validateBtn = document.getElementById("validateIdsButton");
+            const identifierCard = document.getElementById("identifierUploadCard");
+
+            let isValidationStale = false;
+
+            function markValidationStale() {
+                isValidationStale = true;
+                const hiddenContainer = document.getElementById("hiddenValidationInputs");
+                if (hiddenContainer) {
+                    hiddenContainer.innerHTML = "";
+                }
+            }
+
+            idTypeSelect?.addEventListener("change", markValidationStale);
+            idFileInput?.addEventListener("change", markValidationStale);
+
+            form?.addEventListener("submit", function (event) {
+                if (event.submitter === validateBtn) {
+                    return;
+                }
+
+                const hasType = idTypeSelect && idTypeSelect.value.trim() !== "";
+                const hasFile = idFileInput && idFileInput.files && idFileInput.files.length > 0;
+                const hasValidatedRows =
+                    !isValidationStale &&
+                    document.querySelectorAll('input[name^="IdentifierValidationResults"]').length > 0;
+
+                if ((hasType || hasFile) && !hasValidatedRows) {
+                    event.preventDefault();
+
+                    if (warningBanner) {
+                        warningBanner.classList.remove("d-none");
+                    }
+
+                    identifierCard?.scrollIntoView({ behavior: "smooth", block: "center" });
+                    validateBtn?.focus();
+                }
+            });
+
+            // ---------------------------------------------------------
+            // Filter & AST Panel Multi-Select Dropdowns
+            // ---------------------------------------------------------
+            const dropdowns = document.querySelectorAll(".filter-multiselect");
+
+            dropdowns.forEach(function (dropdown) {
+
+                const toggle =
+                    dropdown.querySelector(".filter-multiselect-toggle");
+
+                const options =
+                    document.getElementById(toggle.dataset.target);
+
+                const search =
+                    options.querySelector(".filter-multiselect-search");
+
+                const checkboxes =
+                    options.querySelectorAll(".filter-multiselect-checkbox");
+
+                const label =
+                    toggle.querySelector(".filter-multiselect-label");
+
+                const defaultLabel =
+                    dropdown.dataset.defaultLabel ||
+                    (toggle.dataset.target === "facilityFilterOptions"
+                        ? "All facilities"
+                        : "All organisms");
+
+                function updateLabel() {
+                    const selected =
+                        Array.from(checkboxes).filter(x => x.checked);
+
+                    if (selected.length === 0) {
+                        label.textContent = defaultLabel;
+                    }
+                    else if (selected.length === 1) {
+                        label.textContent =
+                            selected[0]
+                                .closest("label")
+                                .querySelector("span")
+                                .textContent
+                                .trim();
+                    }
+                    else {
+                        label.textContent = `${selected.length} selected`;
+                    }
+                }
+
+                toggle.addEventListener("click", function () {
+                    document
+                        .querySelectorAll(".filter-multiselect-options")
+                        .forEach(function (item) {
+                            if (item !== options) {
+                                item.classList.add("d-none");
+                            }
+                        });
+
+                    options.classList.toggle("d-none");
+
+                    if (!options.classList.contains("d-none")) {
+                        search.focus();
+                    }
+                });
+
+                search.addEventListener("input", function () {
+                    const term = search.value.toLowerCase().trim();
+
+                    options
+                        .querySelectorAll(".filter-multiselect-item")
+                        .forEach(function (item) {
+                            const text = item.textContent.toLowerCase();
+                            item.style.display = text.includes(term) ? "" : "none";
+                        });
+                });
+
+                checkboxes.forEach(function (checkbox) {
+                    checkbox.addEventListener("change", updateLabel);
+                });
+
+                updateLabel();
+            });
+
+            // Close dropdowns when clicking elsewhere.
+            document.addEventListener("click", function (event) {
+                if (!event.target.closest(".filter-multiselect")) {
+                    document
+                        .querySelectorAll(".filter-multiselect-options")
+                        .forEach(function (item) {
+                            item.classList.add("d-none");
+                        });
+                }
+            });
+        });
+    </script>
+}

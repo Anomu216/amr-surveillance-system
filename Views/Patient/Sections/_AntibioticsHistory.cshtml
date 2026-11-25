@@ -1,0 +1,295 @@
+﻿@model AMRSurveillance.ViewModels.PatientViewModel
+
+<div class="card section-card">
+
+    <div class="card-header d-flex align-items-center">
+
+        <i class="bi bi-capsule-pill text-primary me-2 fs-4"></i>
+
+        <div>
+
+            <h5 class="mb-0">
+                Antibiotics &amp; Infection-Related Information
+            </h5>
+
+            <small class="text-muted">
+                Record antibiotic exposure and infection-related information.
+            </small>
+
+        </div>
+
+    </div>
+
+    <div class="card-body">
+
+        <!-- ========================================= -->
+        <!-- Antibiotic History -->
+        <!-- ========================================= -->
+
+        <div id="antibioticHistorySection">
+
+            <h6 class="text-primary border-bottom pb-2 mb-4">
+                Antibiotic History
+            </h6>
+
+            <div class="row g-4 mb-5">
+
+                <!-- Current Antibiotic Use -->
+
+                <div class="col-md-6">
+
+                    <label asp-for="CurrentAntibioticUse"
+                           class="form-label fw-semibold">
+
+                        Currently Receiving Antibiotics
+
+                    </label>
+
+                    <select asp-for="CurrentAntibioticUse"
+                            asp-items="Model.YesNoList"
+                            class="form-select"
+                            id="CurrentAntibioticUse">
+                    </select>
+
+                    <div class="invalid-feedback"></div>
+
+                    <span asp-validation-for="CurrentAntibioticUse"
+                          class="text-danger small"></span>
+
+                </div>
+
+
+                <!-- Surgery for Current Infection -->
+
+                <div class="col-md-6">
+
+                    <label asp-for="SurgeryForInfection"
+                           class="form-label fw-semibold">
+
+                        Surgery for Current Infection
+
+                    </label>
+
+                    <select asp-for="SurgeryForInfection"
+                            asp-items="Model.YesNoList"
+                            class="form-select"
+                            id="SurgeryForInfection">
+                    </select>
+
+                    <div class="invalid-feedback"></div>
+
+                    <span asp-validation-for="SurgeryForInfection"
+                          class="text-danger small"></span>
+
+                </div>
+
+
+                <!-- ========================================= -->
+                <!-- Conditional Antibiotic Details -->
+                <!-- Displayed only when Current Antibiotic Use = Yes -->
+                <!-- ========================================= -->
+
+                <div id="antibioticDetailsContainer"
+                     class="col-12 d-none">
+
+                    <div class="row g-4">
+
+                        <!-- Antibiotic Days -->
+
+                        <div id="antibioticDaysContainer"
+                             class="col-md-6">
+
+                            <label asp-for="AntibioticDays"
+                                   class="form-label fw-semibold">
+
+                                Number of Days on Antibiotics
+
+                            </label>
+
+                            <input asp-for="AntibioticDays"
+                                   class="form-control"
+                                   type="number"
+                                   min="0"
+                                   step="1"
+                                   placeholder="Enter number of days"
+                                   id="AntibioticDays"
+                                   autocomplete="off" />
+
+                            <div class="invalid-feedback"></div>
+
+                            <span asp-validation-for="AntibioticDays"
+                                  class="text-danger small"></span>
+
+                        </div>
+
+
+                        <!-- Antibiotics Used -->
+
+                        <div id="antibioticsUsedContainer"
+                             class="col-md-6">
+
+                            <label asp-for="AntibioticsUsed"
+                                   class="form-label fw-semibold">
+
+                                Antibiotics Used
+
+                            </label>
+
+                            <textarea asp-for="AntibioticsUsed"
+                                      class="form-control"
+                                      rows="3"
+                                      placeholder="Enter the antibiotic(s) reported by the patient..."
+                                      id="AntibioticsUsed"></textarea>
+
+                            <div class="invalid-feedback"></div>
+
+                            <div class="form-text">
+                                Record one or more antibiotics reported by the patient.
+                            </div>
+
+                            <span asp-validation-for="AntibioticsUsed"
+                                  class="text-danger small"></span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ========================================= -->
+        <!-- Infection-Related Information -->
+        <!-- ========================================= -->
+
+        <h6 class="text-primary border-bottom pb-2 mb-4">
+            Infection-Related Information
+        </h6>
+
+        <div class="row g-4">
+
+            <!-- Infection Classification -->
+
+            <div class="col-md-6">
+
+                <label asp-for="HAICAI"
+                       class="form-label fw-semibold">
+
+                    Infection Classification
+
+                </label>
+
+                <select asp-for="HAICAI"
+                        asp-items="Model.HAICAIList"
+                        class="form-select"
+                        id="HAICAI">
+                </select>
+
+                <div class="form-text">
+                    Classify the infection as healthcare-associated
+                    or community-associated.
+                </div>
+
+                <!-- Data quality warning -->
+
+                <div id="haiClassificationWarning"
+                     class="alert alert-warning mt-2 mb-0 d-none"
+                     role="alert">
+                </div>
+
+                <span asp-validation-for="HAICAI"
+                      class="text-danger small"></span>
+
+            </div>
+
+
+            <!-- Infection Source -->
+
+            <div class="col-md-6">
+
+                <label asp-for="InfectionSource"
+                       class="form-label fw-semibold">
+
+                    Infection Source
+
+                </label>
+
+                <select asp-for="InfectionSource"
+                        asp-items="Model.InfectionSourceList"
+                        class="form-select"
+                        id="InfectionSource">
+                </select>
+
+                <div class="invalid-feedback"></div>
+
+                <span asp-validation-for="InfectionSource"
+                      class="text-danger small"></span>
+
+            </div>
+
+
+            <!-- Infection Site -->
+
+            <div class="col-12">
+
+                <label asp-for="InfectionSite"
+                       class="form-label fw-semibold">
+
+                    Infection Site
+
+                </label>
+
+                <select asp-for="InfectionSite"
+                        asp-items="Model.InfectionSiteList"
+                        class="form-select"
+                        id="InfectionSite">
+                </select>
+
+                <div class="invalid-feedback"></div>
+
+                <span asp-validation-for="InfectionSite"
+                      class="text-danger small"></span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+    (function () {
+        const section = document.getElementById("antibioticHistorySection");
+        const useSelect = document.getElementById("CurrentAntibioticUse");
+        const surgerySelect = document.getElementById("SurgeryForInfection");
+
+        if (!section || !useSelect || !surgerySelect) return;
+
+        function syncAntibioticSectionVisibility() {
+            const useContainer = useSelect.closest(".col-md-6");
+            const surgeryContainer = surgerySelect.closest(".col-md-6");
+            const bothHidden =
+                (useContainer && (useContainer.classList.contains("d-none") || useContainer.style.display === "none")) &&
+                (surgeryContainer && (surgeryContainer.classList.contains("d-none") || surgeryContainer.style.display === "none"));
+
+            section.classList.toggle("d-none", Boolean(bothHidden));
+        }
+
+        const observer = new MutationObserver(syncAntibioticSectionVisibility);
+        const useContainer = useSelect.closest(".col-md-6");
+        const surgeryContainer = surgerySelect.closest(".col-md-6");
+
+        if (useContainer) {
+            observer.observe(useContainer, { attributes: true, attributeFilter: ["class", "style"] });
+        }
+        if (surgeryContainer) {
+            observer.observe(surgeryContainer, { attributes: true, attributeFilter: ["class", "style"] });
+        }
+
+        syncAntibioticSectionVisibility();
+    })();
+</script>

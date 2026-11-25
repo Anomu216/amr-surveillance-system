@@ -1,0 +1,21 @@
+﻿@{
+    var title = ViewData["PageTitle"]?.ToString() ?? "AMR Surveillance System";
+    var subtitle = ViewData["PageSubtitle"]?.ToString() ?? "";
+}
+
+<div class="page-header mb-4">
+
+    <div>
+
+        <h2 class="page-title">@title</h2>
+
+        @if (!string.IsNullOrWhiteSpace(subtitle))
+        {
+            <p class="page-subtitle mb-0">
+                @subtitle
+            </p>
+        }
+
+    </div>
+
+</div>

@@ -1,0 +1,94 @@
+﻿@{
+    ViewData["Title"] = "User Created";
+}
+
+<div class="container-fluid py-4">
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h2 class="mb-3">User Account Created</h2>
+
+            <div class="alert alert-success">
+                The account was created successfully.
+            </div>
+
+            <p>
+                <strong>Username:</strong>
+                @ViewBag.CreatedUserName
+            </p>
+
+            <p>
+                Deliver the temporary password to the user through
+                your approved secure organisational channel.
+            </p>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">
+                    Temporary password
+                </label>
+
+                <div class="input-group">
+                    <input id="temporaryPassword"
+                           type="text"
+                           class="form-control"
+                           value="@ViewBag.TemporaryPassword"
+                           readonly
+                           autocomplete="off" />
+
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            onclick="copyTemporaryPassword()">
+                        Copy
+                    </button>
+                </div>
+            </div>
+
+            <div class="alert alert-warning">
+                This password is displayed only once and expires from
+                the temporary display store after five minutes.
+                The user must change it at first login.
+                Do not leave this page open or share the password
+                through an unapproved channel.
+            </div>
+
+            <a asp-controller="UserManagement"
+               asp-action="CreateUser"
+               class="btn btn-primary">
+                Create Another User
+            </a>
+
+            <a asp-controller="Home"
+               asp-action="Index"
+               class="btn btn-outline-secondary">
+                Return to Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+    <script>
+        async function copyTemporaryPassword() {
+            const input = document.getElementById("temporaryPassword");
+
+            if (!input) {
+                alert("Temporary password field was not found.");
+                return;
+            }
+
+            try {
+                await navigator.clipboard.writeText(input.value);
+                alert("Temporary password copied to clipboard.");
+            } catch (error) {
+                input.focus();
+                input.select();
+
+                alert(
+                    "Automatic copying failed. " +
+                    "The password has been selected. " +
+                    "Press Ctrl+C to copy it."
+                );
+            }
+        }
+    </script>
+}

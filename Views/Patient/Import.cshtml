@@ -1,0 +1,661 @@
+﻿@model AMRSurveillance.Imports.Models.ImportViewModel<AMRSurveillance.Models.Patient>
+
+@{
+    ViewData["Title"] = "Import Patients";
+
+    var hasErrors = Model.Errors.Any();
+    var hasWarnings = Model.Warnings.Any();
+    var hasRecords = Model.Records.Any();
+    var canConfirm = Model.ReadyToImport;
+}
+
+<div class="container-fluid">
+
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Import Patients</h2>
+            <p class="text-muted mb-0">
+                Upload patient records from an Excel file.
+            </p>
+        </div>
+
+        <div>
+            <a asp-controller="Patient"
+               asp-action="Index"
+               class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i>
+                Back to Patients
+            </a>
+        </div>
+    </div>
+
+    <!-- Instructions -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">
+            <strong>Import Instructions</strong>
+        </div>
+
+        <div class="card-body">
+
+            <ol class="mb-0">
+                <li class="mb-2">
+                    Download the Patient Import Template.
+                </li>
+
+                <li class="mb-2">
+                    Complete the template using the available lookup values
+                    and the required patient information.
+                </li>
+
+                <li class="mb-2">
+                    Save the Excel file as an
+                    <strong>.xlsx</strong> file.
+                </li>
+
+                <li class="mb-2">
+                    Upload the completed file and click
+                    <strong>Validate File</strong>.
+                </li>
+
+                <li class="mb-2">
+                    Review all validation errors and data quality warnings
+                    before importing.
+                </li>
+
+                <li>
+                    Records with warnings can still be imported, but records
+                    with validation errors must be corrected first.
+                </li>
+            </ol>
+
+            <div class="mt-3">
+                <a asp-action="DownloadImportTemplate"
+                   class="btn btn-success">
+                    <i class="bi bi-file-earmark-excel"></i>
+                    Download Patient Import Template
+                </a>
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- Upload Form -->
+    @if (!Model.IsValidated)
+    {
+        <div class="card shadow-sm mb-4">
+
+            <div class="card-header">
+                <strong>Upload Excel File</strong>
+            </div>
+
+            <div class="card-body">
+
+                <form asp-action="Import"
+                      method="post"
+                      enctype="multipart/form-data">
+
+                    @Html.AntiForgeryToken()
+
+                    <div asp-validation-summary="ModelOnly"
+                         class="text-danger mb-3">
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label asp-for="File"
+                               class="form-label fw-semibold">
+                            Excel File
+                        </label>
+
+                        <input asp-for="File"
+                               type="file"
+                               class="form-control"
+                               accept=".xlsx" />
+
+                        <div class="form-text">
+                            Only Excel .xlsx files are accepted.
+                        </div>
+
+                        <span asp-validation-for="File"
+                              class="text-danger">
+                        </span>
+
+                    </div>
+
+                    <button type="submit"
+                            class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i>
+                        Validate File
+                    </button>
+
+                </form>
+
+            </div>
+        </div>
+    }
+
+
+    <!-- Validation Summary -->
+    @if (Model.IsValidated)
+    {
+        <div class="card shadow-sm mb-4">
+
+            <div class="card-header">
+                <strong>Validation Summary</strong>
+            </div>
+
+            <div class="card-body">
+
+                <div class="row g-3">
+
+                    <div class="col-md">
+                        <div class="border rounded p-3 text-center">
+                            <div class="text-muted small">
+                                Total Rows
+                            </div>
+
+                            <div class="fs-3 fw-bold">
+                                @Model.Summary.TotalRows
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md">
+                        <div class="border rounded p-3 text-center">
+                            <div class="text-muted small">
+                                Valid Rows
+                            </div>
+
+                            <div class="fs-3 fw-bold text-success">
+                                @Model.Summary.SuccessfulRows
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md">
+                        <div class="border rounded p-3 text-center">
+                            <div class="text-muted small">
+                                Failed Rows
+                            </div>
+
+                            <div class="fs-3 fw-bold text-danger">
+                                @Model.Summary.FailedRows
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md">
+                        <div class="border rounded p-3 text-center">
+                            <div class="text-muted small">
+                                Errors
+                            </div>
+
+                            <div class="fs-3 fw-bold text-danger">
+                                @Model.Errors.Count
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md">
+                        <div class="border rounded p-3 text-center">
+                            <div class="text-muted small">
+                                Warnings
+                            </div>
+
+                            <div class="fs-3 fw-bold text-warning">
+                                @Model.Warnings.Count
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+
+
+        <!-- Validation Errors -->
+        @if (hasErrors)
+        {
+            <div class="card shadow-sm border-danger mb-4">
+
+                <div class="card-header bg-danger text-white">
+                    <strong>
+                        Validation Errors
+                    </strong>
+                </div>
+
+                <div class="card-body p-0">
+
+                    <div class="table-responsive"
+                         style="max-height: 500px; overflow-y: auto;">
+
+                        <table class="table table-bordered table-striped table-hover mb-0">
+
+                            <thead class="table-danger sticky-top">
+
+                                <tr>
+                                    <th style="width: 100px;">
+                                        Row
+                                    </th>
+
+                                    <th style="width: 220px;">
+                                        Column
+                                    </th>
+
+                                    <th>
+                                        Error
+                                    </th>
+                                </tr>
+
+                            </thead>
+
+                            <tbody>
+
+                                @foreach (var error in Model.Errors)
+                                {
+                                    <tr>
+
+                                        <td>
+                                            @if (error.RowNumber > 0)
+                                            {
+                                                @error.RowNumber
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">
+                                                    General
+                                                </span>
+                                            }
+                                        </td>
+
+                                        <td>
+                                            @if (!string.IsNullOrWhiteSpace(error.ColumnName))
+                                            {
+                                                @error.ColumnName
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">
+                                                    —
+                                                </span>
+                                            }
+                                        </td>
+
+                                        <td>
+                                            @error.Message
+                                        </td>
+
+                                    </tr>
+                                }
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+            </div>
+        }
+
+
+        <!-- Data Quality Warnings -->
+        @if (hasWarnings)
+        {
+            <div class="card shadow-sm border-warning mb-4">
+
+                <div class="card-header bg-warning">
+                    <strong>
+                        Data Quality Warnings
+                    </strong>
+                </div>
+
+                <div class="card-body">
+
+                    <div class="alert alert-warning mb-3">
+
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+
+                        The following records have data quality warnings.
+                        They can still be imported, but should be reviewed
+                        before confirming the import.
+
+                    </div>
+
+                    <div class="table-responsive"
+                         style="max-height: 500px; overflow-y: auto;">
+
+                        <table class="table table-bordered table-striped table-hover mb-0">
+
+                            <thead class="table-warning sticky-top">
+
+                                <tr>
+                                    <th style="width: 100px;">
+                                        Row
+                                    </th>
+
+                                    <th style="width: 220px;">
+                                        Column
+                                    </th>
+
+                                    <th>
+                                        Warning
+                                    </th>
+                                </tr>
+
+                            </thead>
+
+                            <tbody>
+
+                                @foreach (var warning in Model.Warnings)
+                                {
+                                    <tr>
+
+                                        <td>
+                                            @if (warning.RowNumber > 0)
+                                            {
+                                                @warning.RowNumber
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">
+                                                    General
+                                                </span>
+                                            }
+                                        </td>
+
+                                        <td>
+                                            @if (!string.IsNullOrWhiteSpace(warning.ColumnName))
+                                            {
+                                                @warning.ColumnName
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">
+                                                    —
+                                                </span>
+                                            }
+                                        </td>
+
+                                        <td>
+                                            @warning.Message
+                                        </td>
+
+                                    </tr>
+                                }
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+            </div>
+        }
+
+
+        <!-- Valid Records Preview -->
+        @if (hasRecords)
+        {
+            <div class="card shadow-sm mb-4">
+
+                <div class="card-header d-flex justify-content-between align-items-center">
+
+                    <strong>
+                        Validated Patient Records
+                    </strong>
+
+                    <span class="badge bg-success">
+                        @Model.Records.Count valid record(s)
+                    </span>
+
+                </div>
+
+                <div class="card-body p-0">
+
+                    <div class="table-responsive"
+                         style="max-height: 600px; overflow: auto;">
+
+                        <table class="table table-bordered table-striped table-hover table-sm mb-0">
+
+                            <thead class="table-light sticky-top">
+
+                                <tr>
+
+                                    <th>Patient ID</th>
+                                    <th>Facility</th>
+                                    <th>Enrollment Date</th>
+                                    <th>Receiving Date</th>
+                                    <th>Age</th>
+                                    <th>Sex</th>
+                                    <th>Patient Type</th>
+                                    <th>Clinical Presentation</th>
+                                    <th>Infection Source</th>
+                                    <th>Infection Site</th>
+
+                                </tr>
+
+                            </thead>
+
+                            <tbody>
+
+                                @foreach (var patient in Model.Records)
+                                {
+                                    <tr>
+
+                                        <td class="fw-semibold">
+                                            @patient.PatientID
+                                        </td>
+
+                                        <td>
+                                            @patient.FacilityID
+                                        </td>
+
+                                        <td>
+                                            @(patient.EnrollmentDate?.ToString("dd/MM/yyyy") ?? "")
+                                        </td>
+
+                                        <td>
+                                            @(patient.ReceivingDate?.ToString("dd/MM/yyyy") ?? "")
+                                        </td>
+
+                                        <td>
+                                            @(patient.Age?.ToString() ?? "")
+                                        </td>
+
+                                        <td>
+                                            @patient.Sex
+                                        </td>
+
+                                        <td>
+                                            @patient.PatientType
+                                        </td>
+
+                                        <td>
+                                            @patient.ClinicalPresentation
+                                        </td>
+
+                                        <td>
+                                            @patient.InfectionSource
+                                        </td>
+
+                                        <td>
+                                            @patient.InfectionSite
+                                        </td>
+
+                                    </tr>
+                                }
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+            </div>
+        }
+
+
+        <!-- Import Actions -->
+        <div class="card shadow-sm mb-4">
+
+            <div class="card-body">
+
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+
+                    <div>
+
+                        @if (canConfirm)
+                        {
+                            <h5 class="mb-1 text-success">
+                                <i class="bi bi-check-circle"></i>
+                                File is ready for import
+                            </h5>
+
+                            <p class="text-muted mb-0">
+                                @if (hasWarnings)
+                                {
+                                    <span>
+                                        The file has data quality warnings,
+                                        but no blocking validation errors.
+                                        Please review the warnings before
+                                        importing.
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span>
+                                        All validated records passed the import
+                                        validation rules.
+                                    </span>
+                                }
+                            </p>
+                        }
+                        else
+                        {
+                            <h5 class="mb-1 text-danger">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                File cannot be imported
+                            </h5>
+
+                            <p class="text-muted mb-0">
+                                Correct the validation errors and upload
+                                the file again.
+                            </p>
+                        }
+
+                    </div>
+
+
+                    <div class="d-flex gap-2">
+
+                        @if (canConfirm)
+                        {
+                            <form asp-action="ConfirmImport"
+                                  method="post">
+
+                                @Html.AntiForgeryToken()
+
+                                <button type="submit"
+                                        class="btn btn-success"
+                                        onclick="return confirm('Are you sure you want to import these patient records?');">
+
+                                    <i class="bi bi-database-add"></i>
+                                    Confirm Import
+                                </button>
+
+                            </form>
+                        }
+
+
+                        <form asp-action="ClearImport"
+                              method="post">
+
+                            @Html.AntiForgeryToken()
+
+                            <button type="submit"
+                                    class="btn btn-outline-secondary">
+
+                                <i class="bi bi-arrow-repeat"></i>
+                                Start Over
+
+                            </button>
+
+                        </form>
+
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    }
+
+
+    <!-- Upload Another File -->
+    @if (Model.IsValidated)
+    {
+        <div class="card shadow-sm mb-4">
+
+            <div class="card-header">
+                <strong>Upload Another File</strong>
+            </div>
+
+            <div class="card-body">
+
+                <form asp-action="Import"
+                      method="post"
+                      enctype="multipart/form-data">
+
+                    @Html.AntiForgeryToken()
+
+                    <div class="row align-items-end">
+
+                        <div class="col-md-9">
+
+                            <label asp-for="File"
+                                   class="form-label">
+                                Excel File
+                            </label>
+
+                            <input asp-for="File"
+                                   type="file"
+                                   class="form-control"
+                                   accept=".xlsx" />
+
+                        </div>
+
+                        <div class="col-md-3">
+
+                            <button type="submit"
+                                    class="btn btn-primary w-100">
+
+                                <i class="bi bi-upload"></i>
+                                Validate New File
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+    }
+
+</div>
+
+
+@section Scripts
+{
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

@@ -1,0 +1,289 @@
+﻿@model IEnumerable<AMRSurveillance.ViewModels.GenomicsRecordViewModel>
+
+@{
+    ViewData["Title"] = "Genomics Records";
+    var records = Model?.ToList() ?? new List<AMRSurveillance.ViewModels.GenomicsRecordViewModel>();
+}
+
+<div class="container-fluid py-4">
+
+    <!-- Page heading -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <h2 class="fw-bold mb-1">Genomics Records</h2>
+            <p class="text-muted mb-0">
+                Manage bacterial genomic sequencing metadata and gene detection results.
+            </p>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            <a asp-action="DownloadImportTemplate"
+               class="btn btn-outline-secondary">
+                <i class="bi bi-download me-1"></i>
+                Download Excel Template
+            </a>
+
+            <a asp-action="Import"
+               class="btn btn-outline-primary">
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i>
+                Import Excel
+            </a>
+
+            <a asp-action="Create"
+               class="btn btn-primary">
+                <i class="bi bi-plus-circle me-1"></i>
+                Add Genomics Record
+            </a>
+        </div>
+    </div>
+
+    <!-- Feedback messages -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-2"></i>
+            @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"
+                    aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            @TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"
+                    aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Summary cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body d-flex align-items-center">
+                    <div class="rounded-3 bg-primary bg-opacity-10 text-primary p-3 me-3">
+                        <i class="bi bi-database fs-3"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small">Total Genomics Records</div>
+                        <div class="fs-3 fw-bold">@records.Count</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body d-flex align-items-center">
+                    <div class="rounded-3 bg-success bg-opacity-10 text-success p-3 me-3">
+                        <i class="bi bi-check2-circle fs-3"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small">Records with Sequencing Dates</div>
+                        <div class="fs-3 fw-bold">
+                            @records.Count(r => r.SequencingDate.HasValue)
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body d-flex align-items-center">
+                    <div class="rounded-3 bg-info bg-opacity-10 text-info p-3 me-3">
+                        <i class="bi bi-shield-check fs-3"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted small">Gene Results Recorded</div>
+                        <div class="fs-3 fw-bold">
+                            @records.Sum(r => r.GeneValues?.Values.Count(v => v.HasValue) ?? 0)
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Records table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom py-3">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <div>
+                    <h5 class="mb-1 fw-semibold">Sequencing Register</h5>
+                    <small class="text-muted">
+                        Select a record to view its metadata and gene results.
+                    </small>
+                </div>
+
+                <div style="max-width: 320px; width: 100%;">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input type="search"
+                               id="genomicsSearch"
+                               class="form-control"
+                               placeholder="Search records..."
+                               aria-label="Search genomics records" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-0">
+            @if (records.Count == 0)
+            {
+                <div class="text-center py-5 px-3">
+                    <i class="bi bi-database-exclamation display-4 text-muted"></i>
+                    <h5 class="mt-3">No genomics records found</h5>
+                    <p class="text-muted">
+                        Add a record manually or import records using an Excel template.
+                    </p>
+                    <div class="d-flex justify-content-center flex-wrap gap-2">
+                        <a asp-action="Create" class="btn btn-primary">
+                            <i class="bi bi-plus-circle me-1"></i>
+                            Add First Record
+                        </a>
+                        <a asp-action="Import" class="btn btn-outline-primary">
+                            <i class="bi bi-file-earmark-spreadsheet me-1"></i>
+                            Import Excel
+                        </a>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="genomicsTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col" class="ps-3">Isolate ID</th>
+                                <th scope="col">KEN ID</th>
+                                <th scope="col">DNA Sample ID</th>
+                                <th scope="col">Sequencing Date</th>
+                                <th scope="col">Strain Type</th>
+                                <th scope="col">Serotype</th>
+                                <th scope="col">Genome Length</th>
+                                <th scope="col">Contigs</th>
+                                <th scope="col">Genes Recorded</th>
+                                <th scope="col" class="text-end pe-3">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var record in records)
+                            {
+                                var geneResults = record.GeneValues?.Values
+                                .Count(v => v.HasValue) ?? 0;
+
+                                <tr>
+                                    <td class="ps-3 fw-semibold">
+                                        @record.IsolateID
+                                    </td>
+                                    <td>@(record.KENID ?? "—")</td>
+                                    <td>@(record.DNASampleID ?? "—")</td>
+                                    <td>
+                                        @(record.SequencingDate?.ToString("dd MMM yyyy") ?? "—")
+                                    </td>
+                                    <td>@(record.StrainType ?? "—")</td>
+                                    <td>@(record.Serotype ?? "—")</td>
+                                    <td>
+                                        @(record.GenomeLength?.ToString("N0") ?? "—")
+                                    </td>
+                                    <td>
+                                        @(record.NoOfContigs?.ToString("N0") ?? "—")
+                                    </td>
+                                    <td>
+                                        @if (geneResults > 0)
+                                        {
+                                            <span class="badge bg-success bg-opacity-10 text-success">
+                                                @geneResults recorded
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary bg-opacity-10 text-secondary">
+                                                None recorded
+                                            </span>
+                                        }
+                                    </td>
+                                    <td class="text-end pe-3">
+                                        <div class="d-inline-flex gap-1">
+                                            <a asp-action="Details"
+                                               asp-route-isolateId="@record.IsolateID"
+                                               class="btn btn-sm btn-outline-info"
+                                               title="View details"
+                                               aria-label="View details">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+
+                                            <a asp-action="Edit"
+                                               asp-route-isolateId="@record.IsolateID"
+                                               class="btn btn-sm btn-outline-primary"
+                                               title="Edit record"
+                                               aria-label="Edit record">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </a>
+
+                                            <a asp-action="Delete"
+                                               asp-route-isolateId="@record.IsolateID"
+                                               class="btn btn-sm btn-outline-danger"
+                                               title="Delete record"
+                                               aria-label="Delete record">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="border-top px-3 py-3 d-flex justify-content-between align-items-center">
+                    <small class="text-muted" id="recordCount">
+                        Showing @records.Count records
+                    </small>
+                    <small class="text-muted">
+                        Gene results are stored per isolate.
+                    </small>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const searchInput = document.getElementById("genomicsSearch");
+            const table = document.getElementById("genomicsTable");
+            const recordCount = document.getElementById("recordCount");
+
+            if (!searchInput || !table) return;
+
+            const rows = Array.from(table.querySelectorAll("tbody tr"));
+
+            function filterRows() {
+                const query = searchInput.value.trim().toLowerCase();
+                let visibleCount = 0;
+
+                rows.forEach(function (row) {
+                    const matches = row.innerText.toLowerCase().includes(query);
+                    row.style.display = matches ? "" : "none";
+
+                    if (matches) visibleCount++;
+                });
+
+                if (recordCount) {
+                    recordCount.textContent =
+                        `Showing ${visibleCount} of ${rows.length} records`;
+                }
+            }
+
+            searchInput.addEventListener("input", filterRows);
+        });
+    </script>
+}

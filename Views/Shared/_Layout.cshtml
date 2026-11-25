@@ -1,0 +1,133 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>@ViewData["Title"] - AMR Surveillance System</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet"
+          href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+
+    <!-- Select2 -->
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+
+    <!-- Default CSS -->
+    <link rel="stylesheet"
+          href="~/css/site.css"
+          asp-append-version="true" />
+
+    <!-- AMR Theme -->
+    <link rel="stylesheet"
+          href="~/css/amr.css"
+          asp-append-version="true" />
+</head>
+
+@{
+        var controllerName =
+                ViewContext.RouteData.Values["controller"]?.ToString();
+
+        var actionName =
+                ViewContext.RouteData.Values["action"]?.ToString();
+
+        var isLoginPage =
+                string.Equals(
+                        controllerName,
+                        "Account",
+                        StringComparison.OrdinalIgnoreCase)
+                &&
+                string.Equals(
+                        actionName,
+                        "Login",
+                        StringComparison.OrdinalIgnoreCase);
+}
+
+<body class="@(isLoginPage ? "login-page" : "application-page")">
+
+    <!-- Header -->
+    <partial name="_Header" />
+
+    @if (isLoginPage)
+    {
+        <!-- Login: no sidebar or sidebar wrapper -->
+        <main class="login-content">
+            @RenderBody()
+        </main>
+    }
+    else
+    {
+        <!-- Application layout -->
+        <div class="app-wrapper">
+
+            <!-- Sidebar and backdrop are rendered together -->
+            <partial name="_Sidebar" />
+
+            <!-- Main Content -->
+            <main class="main-content">
+                @RenderBody()
+            </main>
+
+        </div>
+    }
+
+    <!-- jQuery -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+
+    <!-- Bootstrap -->
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Select2 -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <!-- Site -->
+    <script src="~/js/site.js"
+            asp-append-version="true"></script>
+
+    <!-- Initialize searchable dropdowns & auto-dismiss success alerts -->
+    <script>
+        $(function () {
+            $('.searchable').select2({
+                width: '100%',
+                placeholder: '-- Select --',
+                allowClear: true
+            });
+
+            function dismissBanner(el) {
+                el.style.transition = 'opacity 0.5s ease';
+                el.style.opacity = '0';
+                setTimeout(function () {
+                    el.remove();
+                }, 500);
+            }
+
+            const successAlerts = new Set(document.querySelectorAll('.alert-success'));
+
+            document.querySelectorAll('.alert, [role="alert"], [class*="alert"]').forEach(function (el) {
+                const text = (el.textContent || '').toLowerCase();
+                if (
+                    el.classList.contains('alert-success') ||
+                    el.className.toLowerCase().includes('success') ||
+                    text.includes('successfully')
+                ) {
+                    successAlerts.add(el);
+                }
+            });
+
+            successAlerts.forEach(function (alertEl) {
+                setTimeout(function () {
+                    dismissBanner(alertEl);
+                }, 4000);
+            });
+        });
+    </script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+
+</body>
+</html>

@@ -1,0 +1,65 @@
+﻿@model AMRSurveillance.ViewModels.PatientViewModel
+
+<div class="card section-card">
+
+    <div class="card-header d-flex align-items-center">
+
+        <i class="bi bi-file-earmark-check-fill text-primary me-2 fs-4"></i>
+
+        <div>
+
+            <h5 class="mb-0">
+                Consent
+            </h5>
+
+            <small class="text-muted">
+                Confirm participant consent before completing registration.
+            </small>
+
+        </div>
+
+    </div>
+
+    <div class="card-body">
+
+        <div class="alert alert-info">
+
+            <i class="bi bi-info-circle-fill me-2"></i>
+
+            Participant consented to shipping of the specimen
+            according to the study protocol.
+
+        </div>
+
+        <div class="row g-4">
+
+            <!-- Consent Sample -->
+
+            <div class="col-md-6"
+                 id="consentSampleContainer">
+
+                <label asp-for="ConsentSample"
+                       class="form-label fw-semibold">
+
+                    Consent Obtained
+
+                </label>
+
+                <select asp-for="ConsentSample"
+                        asp-items="Model.YesNoList"
+                        class="form-select">
+                </select>
+
+                <div class="invalid-feedback"></div>
+
+                <span asp-validation-for="ConsentSample"
+                      class="text-danger small">
+                </span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

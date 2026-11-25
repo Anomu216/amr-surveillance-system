@@ -1,0 +1,847 @@
+﻿@model AMRSurveillance.ViewModels.PatientViewModel
+
+<div class="card section-card">
+
+    <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+
+        <div class="d-flex align-items-center min-w-0">
+
+            <i class="bi bi-shield-check text-primary me-2 fs-4 flex-shrink-0"></i>
+
+            <div class="min-w-0">
+
+                <h5 class="mb-0">
+                    Personal History &amp; Potential Risk Factors
+                </h5>
+
+                <small class="text-muted">
+                    Record personal history and potential risk factors associated with antimicrobial resistance.
+                </small>
+
+            </div>
+
+        </div>
+
+        <div class="d-flex align-items-center flex-wrap gap-2" id="riskFactorBulkActions">
+
+            <button type="button"
+                    class="btn btn-sm btn-outline-primary text-nowrap"
+                    id="selectAllRiskYesBtn">
+                <i class="bi bi-check2-all me-1"></i>
+                All Yes
+            </button>
+
+            <button type="button"
+                    class="btn btn-sm btn-outline-secondary text-nowrap"
+                    id="selectAllRiskNoBtn">
+                <i class="bi bi-x-circle me-1"></i>
+                All No
+            </button>
+
+            <button type="button"
+                    class="btn btn-sm btn-outline-danger text-nowrap"
+                    id="clearAllRiskBtn"
+                    title="Clear all selections (leave unentered)">
+                <i class="bi bi-eraser me-1"></i>
+                Clear
+            </button>
+
+        </div>
+
+    </div>
+
+    <div class="card-body">
+
+        <div id="riskFactorIsoNotice" class="alert alert-secondary mb-0 d-none" role="status">
+            <i class="bi bi-info-circle me-2"></i>
+            Personal history and risk factors are <strong>Not Applicable (N/A)</strong> for ISO cases.
+        </div>
+
+        <div id="riskFactorFields">
+
+            <div class="table-responsive">
+
+                <table class="table table-bordered align-middle mb-0">
+
+                    <thead class="table-light">
+
+                        <tr>
+
+                            <th scope="col">
+                                Personal History / Potential Risk Factor
+                            </th>
+
+                            <th scope="col"
+                                class="text-center"
+                                style="width: 100px;">
+                                Yes
+                            </th>
+
+                            <th scope="col"
+                                class="text-center"
+                                style="width: 100px;">
+                                No
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        <!-- Chronic Illness -->
+
+                        <tr>
+
+                            <td>
+                                <label class="mb-0" for="ChronicIllnessYes">
+                                    Chronic Illness
+                                </label>
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="ChronicIllness"
+                                       value="Yes"
+                                       id="ChronicIllnessYes" />
+
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="ChronicIllness"
+                                       value="No"
+                                       id="ChronicIllnessNo" />
+
+                            </td>
+
+                        </tr>
+
+
+                        <!-- Chronic Skin Condition -->
+
+                        <tr>
+
+                            <td>
+                                <label class="mb-0" for="ChronicSkinConditionYes">
+                                    Chronic Skin Condition
+                                </label>
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="ChronicSkinCondition"
+                                       value="Yes"
+                                       id="ChronicSkinConditionYes" />
+
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="ChronicSkinCondition"
+                                       value="No"
+                                       id="ChronicSkinConditionNo" />
+
+                            </td>
+
+                        </tr>
+
+
+                        <!-- Body Piercings -->
+
+                        <tr>
+
+                            <td>
+                                <label class="mb-0" for="BodyPiercingsYes">
+                                    Body Piercings
+                                </label>
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="BodyPiercings"
+                                       value="Yes"
+                                       id="BodyPiercingsYes" />
+
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="BodyPiercings"
+                                       value="No"
+                                       id="BodyPiercingsNo" />
+
+                            </td>
+
+                        </tr>
+
+
+                        <!-- Immunosuppressed -->
+
+                        <tr>
+
+                            <td>
+                                <label class="mb-0" for="ImmunosuppressedYes">
+                                    Immunosuppressed
+                                </label>
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="Immunosuppressed"
+                                       value="Yes"
+                                       id="ImmunosuppressedYes" />
+
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="Immunosuppressed"
+                                       value="No"
+                                       id="ImmunosuppressedNo" />
+
+                            </td>
+
+                        </tr>
+
+
+                        <!-- Antacid Use -->
+
+                        <tr>
+
+                            <td>
+                                <label class="mb-0" for="AntacidUseYes">
+                                    Antacid Use
+                                </label>
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="AntacidUse"
+                                       value="Yes"
+                                       id="AntacidUseYes" />
+
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="AntacidUse"
+                                       value="No"
+                                       id="AntacidUseNo" />
+
+                            </td>
+
+                        </tr>
+
+
+                        <!-- Household Member Infection -->
+
+                        <tr>
+
+                            <td>
+                                <label class="mb-0" for="HouseholdMemberInfectionYes">
+                                    Household Member with Infection
+                                </label>
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="HouseholdMemberInfection"
+                                       value="Yes"
+                                       id="HouseholdMemberInfectionYes" />
+
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="HouseholdMemberInfection"
+                                       value="No"
+                                       id="HouseholdMemberInfectionNo" />
+
+                            </td>
+
+                        </tr>
+
+
+                        <!-- Household Hospital Worker -->
+
+                        <tr>
+
+                            <td>
+                                <label class="mb-0" for="HouseholdHospitalWorkerYes">
+                                    Household Member is a Hospital Worker
+                                </label>
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="HouseholdHospitalWorker"
+                                       value="Yes"
+                                       id="HouseholdHospitalWorkerYes" />
+
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="HouseholdHospitalWorker"
+                                       value="No"
+                                       id="HouseholdHospitalWorkerNo" />
+
+                            </td>
+
+                        </tr>
+
+
+                        <!-- Outdoor Injury -->
+
+                        <tr>
+
+                            <td>
+                                <label class="mb-0" for="OutdoorInjuryYes">
+                                    Outdoor Injury
+                                </label>
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="OutdoorInjury"
+                                       value="Yes"
+                                       id="OutdoorInjuryYes" />
+
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="OutdoorInjury"
+                                       value="No"
+                                       id="OutdoorInjuryNo" />
+
+                            </td>
+
+                        </tr>
+
+
+                        <!-- Pregnancy -->
+
+                        <tr id="pregnancyContainer">
+
+                            <td>
+                                <label class="mb-0" for="PregnantYes">
+                                    Pregnant
+                                </label>
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="Pregnant"
+                                       value="Yes"
+                                       id="PregnantYes" />
+
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="Pregnant"
+                                       value="No"
+                                       id="PregnantNo" />
+
+                            </td>
+
+                        </tr>
+
+
+                        <!-- Previous Infection -->
+
+                        <tr>
+
+                            <td>
+                                <label class="mb-0" for="PreviousInfectionYes">
+                                    Previous Infection
+                                </label>
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="PreviousInfection"
+                                       value="Yes"
+                                       id="PreviousInfectionYes" />
+
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="PreviousInfection"
+                                       value="No"
+                                       id="PreviousInfectionNo" />
+
+                            </td>
+
+                        </tr>
+
+
+                        <!-- Prior Hospital Admission -->
+
+                        <tr>
+
+                            <td>
+                                <label class="mb-0" for="PriorHospitalAdmissionYes">
+                                    Prior Hospital Admission
+                                </label>
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="PriorHospitalAdmission"
+                                       value="Yes"
+                                       id="PriorHospitalAdmissionYes" />
+
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="PriorHospitalAdmission"
+                                       value="No"
+                                       id="PriorHospitalAdmissionNo" />
+
+                            </td>
+
+                        </tr>
+
+
+                        <!-- Long-Term Facility -->
+
+                        <tr>
+
+                            <td>
+                                <label class="mb-0" for="LongTermFacilityYes">
+                                    Long-Term Care Facility
+                                </label>
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="LongTermFacility"
+                                       value="Yes"
+                                       id="LongTermFacilityYes" />
+
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="LongTermFacility"
+                                       value="No"
+                                       id="LongTermFacilityNo" />
+
+                            </td>
+
+                        </tr>
+
+
+                        <!-- Injection Drug Use -->
+
+                        <tr>
+
+                            <td>
+                                <label class="mb-0" for="InjectionDrugUseYes">
+                                    Injection Drug Use
+                                </label>
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="InjectionDrugUse"
+                                       value="Yes"
+                                       id="InjectionDrugUseYes" />
+
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="InjectionDrugUse"
+                                       value="No"
+                                       id="InjectionDrugUseNo" />
+
+                            </td>
+
+                        </tr>
+
+
+                        <!-- Non-Injection Drug Use -->
+
+                        <tr>
+
+                            <td>
+                                <label class="mb-0" for="NonInjectionDrugUseYes">
+                                    Non-Injection Drug Use
+                                </label>
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="NonInjectionDrugUse"
+                                       value="Yes"
+                                       id="NonInjectionDrugUseYes" />
+
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="NonInjectionDrugUse"
+                                       value="No"
+                                       id="NonInjectionDrugUseNo" />
+
+                            </td>
+
+                        </tr>
+
+
+                        <!-- Homeless -->
+
+                        <tr>
+
+                            <td>
+                                <label class="mb-0" for="HomelessYes">
+                                    Homeless
+                                </label>
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="Homeless"
+                                       value="Yes"
+                                       id="HomelessYes" />
+
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="Homeless"
+                                       value="No"
+                                       id="HomelessNo" />
+
+                            </td>
+
+                        </tr>
+
+
+                        <!-- Imprisoned -->
+
+                        <tr>
+
+                            <td>
+                                <label class="mb-0" for="ImprisonedYes">
+                                    Imprisoned
+                                </label>
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="Imprisoned"
+                                       value="Yes"
+                                       id="ImprisonedYes" />
+
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="Imprisoned"
+                                       value="No"
+                                       id="ImprisonedNo" />
+
+                            </td>
+
+                        </tr>
+
+
+                        <!-- Nursery / Childcare / Boarding -->
+
+                        <tr>
+
+                            <td>
+                                <label class="mb-0" for="NurseryChildcareBoardingYes">
+                                    Nursery / Childcare / Boarding School
+                                </label>
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="NurseryChildcareBoarding"
+                                       value="Yes"
+                                       id="NurseryChildcareBoardingYes" />
+
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="NurseryChildcareBoarding"
+                                       value="No"
+                                       id="NurseryChildcareBoardingNo" />
+
+                            </td>
+
+                        </tr>
+
+
+                        <!-- Contact Sports -->
+
+                        <tr>
+
+                            <td>
+                                <label class="mb-0" for="ContactSportsYes">
+                                    Contact Sports
+                                </label>
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="ContactSports"
+                                       value="Yes"
+                                       id="ContactSportsYes" />
+
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="ContactSports"
+                                       value="No"
+                                       id="ContactSportsNo" />
+
+                            </td>
+
+                        </tr>
+
+
+                        <!-- Travel Outside County -->
+
+                        <tr>
+
+                            <td>
+                                <label class="mb-0" for="TravelOutsideCountyYes">
+                                    Travel Outside County (Past Year)
+                                </label>
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="TravelOutsideCounty"
+                                       value="Yes"
+                                       id="TravelOutsideCountyYes" />
+
+                            </td>
+
+                            <td class="text-center">
+
+                                <input class="form-check-input"
+                                       type="radio"
+                                       asp-for="TravelOutsideCounty"
+                                       value="No"
+                                       id="TravelOutsideCountyNo" />
+
+                            </td>
+
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            <div class="form-text mt-2">
+                Tip: Double-click any selected option to unselect it and leave that item unentered.
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+    (function () {
+        const container = document.getElementById("riskFactorFields");
+        const bulkActions = document.getElementById("riskFactorBulkActions");
+        const isoNotice = document.getElementById("riskFactorIsoNotice");
+        const allYesBtn = document.getElementById("selectAllRiskYesBtn");
+        const allNoBtn = document.getElementById("selectAllRiskNoBtn");
+        const clearAllBtn = document.getElementById("clearAllRiskBtn");
+
+        if (!container || !allYesBtn || !allNoBtn) return;
+
+        function syncIsoDisplayState() {
+            const isHidden = container.classList.contains("d-none") ||
+                container.style.display === "none";
+
+            if (bulkActions) {
+                bulkActions.classList.toggle("d-none", isHidden);
+            }
+            if (isoNotice) {
+                isoNotice.classList.toggle("d-none", !isHidden);
+            }
+        }
+
+        function getActiveRows() {
+            return Array.from(container.querySelectorAll("tbody tr")).filter(row => {
+                if (row.classList.contains("d-none") || window.getComputedStyle(row).display === "none") {
+                    return false;
+                }
+                const anyEnabled = row.querySelector('input[type="radio"]:not(:disabled)');
+                return Boolean(anyEnabled);
+            });
+        }
+
+        function syncBulkButtonStates() {
+            const rows = getActiveRows();
+            const allYesChecked = rows.length > 0 && rows.every(row => {
+                const r = row.querySelector('input[type="radio"][value="Yes"]:not(:disabled)');
+                return r && r.checked;
+            });
+            const allNoChecked = rows.length > 0 && rows.every(row => {
+                const r = row.querySelector('input[type="radio"][value="No"]:not(:disabled)');
+                return r && r.checked;
+            });
+
+            allYesBtn.classList.toggle("active", allYesChecked);
+            allYesBtn.setAttribute("aria-pressed", String(allYesChecked));
+
+            allNoBtn.classList.toggle("active", allNoChecked);
+            allNoBtn.setAttribute("aria-pressed", String(allNoChecked));
+        }
+
+        function clearAllRiskFactors() {
+            const rows = getActiveRows();
+            rows.forEach(row => {
+                row.querySelectorAll('input[type="radio"]:not(:disabled)').forEach(r => {
+                    if (r.checked) {
+                        r.checked = false;
+                        r.dispatchEvent(new Event("change", { bubbles: true }));
+                    }
+                });
+            });
+            syncBulkButtonStates();
+        }
+
+        function toggleAllRiskFactors(targetValue) {
+            const rows = getActiveRows();
+            if (rows.length === 0) return;
+
+            const isAlreadyAllSelected = rows.every(row => {
+                const radio = row.querySelector(`input[type="radio"][value="${targetValue}"]:not(:disabled)`);
+                return radio && radio.checked;
+            });
+
+            if (isAlreadyAllSelected) {
+                clearAllRiskFactors();
+                return;
+            }
+
+            rows.forEach(row => {
+                const targetRadio = row.querySelector(`input[type="radio"][value="${targetValue}"]:not(:disabled)`);
+                if (targetRadio && !targetRadio.checked) {
+                    targetRadio.checked = true;
+                    targetRadio.dispatchEvent(new Event("change", { bubbles: true }));
+                }
+            });
+
+            syncBulkButtonStates();
+        }
+
+        allYesBtn.addEventListener("click", () => toggleAllRiskFactors("Yes"));
+        allNoBtn.addEventListener("click", () => toggleAllRiskFactors("No"));
+        if (clearAllBtn) {
+            clearAllBtn.addEventListener("click", clearAllRiskFactors);
+        }
+
+        container.querySelectorAll('input[type="radio"]').forEach(radio => {
+            radio.addEventListener("dblclick", function () {
+                if (!this.disabled && this.checked) {
+                    this.checked = false;
+                    this.dispatchEvent(new Event("change", { bubbles: true }));
+                    syncBulkButtonStates();
+                }
+            });
+
+            radio.addEventListener("change", syncBulkButtonStates);
+        });
+
+        const observer = new MutationObserver(syncIsoDisplayState);
+        observer.observe(container, { attributes: true, attributeFilter: ["class", "style"] });
+
+        syncIsoDisplayState();
+        syncBulkButtonStates();
+    })();
+</script>

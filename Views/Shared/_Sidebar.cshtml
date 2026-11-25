@@ -1,0 +1,204 @@
+﻿@using AMRSurveillance.Security
+
+<nav class="sidebar" id="appSidebar" aria-label="Main navigation">
+    <ul class="sidebar-menu">
+
+        <!-- Dashboard: all roles -->
+        <li class="sidebar-item">
+            <a asp-controller="Home"
+               asp-action="Index"
+               class="sidebar-link">
+                <i class="bi bi-house-door sidebar-icon"></i>
+                <span>Dashboard</span>
+            </a>
+        </li>
+
+        <!-- Surveillance Reports: all roles -->
+        <li class="sidebar-item">
+            <a asp-controller="Report"
+               asp-action="Index"
+               class="sidebar-link">
+                <i class="bi bi-file-earmark-bar-graph sidebar-icon"></i>
+                <span>Surveillance Reports</span>
+            </a>
+        </li>
+
+        <!-- Patient Registration: System Administrator, Data Entry Staff -->
+        @if (User.IsInRole(AppRoles.SystemAdministrator)
+                || User.IsInRole(AppRoles.DataEntryStaff))
+        {
+            <li class="sidebar-item">
+                <a asp-controller="Patient"
+                   asp-action="Create"
+                   class="sidebar-link">
+                    <i class="bi bi-person-plus sidebar-icon"></i>
+                    <span>Patient Registration</span>
+                </a>
+            </li>
+        }
+
+        <!-- Worksheets Entry: System Administrator, Analyst, Data Entry Staff -->
+        @if (User.IsInRole(AppRoles.SystemAdministrator)
+                || User.IsInRole(AppRoles.Analyst)
+                || User.IsInRole(AppRoles.DataEntryStaff))
+        {
+            <li class="sidebar-item">
+                <a asp-controller="Worksheet"
+                   asp-action="Index"
+                   class="sidebar-link">
+                    <i class="bi bi-clipboard2-pulse sidebar-icon"></i>
+                    <span>Worksheets Entry</span>
+                </a>
+            </li>
+        }
+
+        <!-- Genomics: System Administrator, Genomics Staff -->
+        @if (User.IsInRole(AppRoles.SystemAdministrator)
+                || User.IsInRole(AppRoles.GenomicsStaff))
+        {
+            <li class="sidebar-item sidebar-genomics">
+                <a class="sidebar-link sidebar-genomics-toggle collapsed"
+                   data-bs-toggle="collapse"
+                   href="#genomicsMenu"
+                   role="button"
+                   aria-expanded="false"
+                   aria-controls="genomicsMenu">
+                    <i class="bi bi-diagram-3 sidebar-icon"></i>
+                    <span>Genomics</span>
+                    <i class="bi bi-chevron-down sidebar-chevron"></i>
+                </a>
+
+                <div class="collapse" id="genomicsMenu">
+                    <ul class="sidebar-submenu">
+                        <li class="sidebar-item">
+                            <a asp-controller="GeneReference"
+                               asp-action="Index"
+                               class="sidebar-link sidebar-sublink">
+                                <i class="bi bi-journal-medical sidebar-icon"></i>
+                                <span>Gene Reference</span>
+                            </a>
+                        </li>
+
+                        <li class="sidebar-item">
+                            <a asp-controller="Genomics"
+                               asp-action="Index"
+                               class="sidebar-link sidebar-sublink">
+                                <i class="bi bi-table sidebar-icon"></i>
+                                <span>Genomics Records</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+        }
+
+        <!-- Reference Data: System Administrator, Analyst, Genomics Staff -->
+        @if (User.IsInRole(AppRoles.SystemAdministrator)
+                || User.IsInRole(AppRoles.Analyst)
+                || User.IsInRole(AppRoles.GenomicsStaff))
+        {
+            <li class="sidebar-item">
+                <a asp-controller="ReferenceData"
+                   asp-action="Index"
+                   class="sidebar-link">
+                    <i class="bi bi-journal-medical sidebar-icon"></i>
+                    <span>Reference Data</span>
+                </a>
+            </li>
+        }
+
+        <!-- Data Request & Export: all five roles -->
+        <li class="sidebar-item sidebar-data-request">
+            <a asp-controller="DataRequest"
+               asp-action="Index"
+               class="sidebar-link">
+                <i class="bi bi-file-earmark-arrow-down sidebar-icon"></i>
+                <span>Data Request &amp; Export</span>
+            </a>
+        </li>
+
+        <!-- Administrator menu: System Administrator only -->
+        @if (User.IsInRole(AppRoles.SystemAdministrator))
+        {
+            <li class="sidebar-item sidebar-admin">
+                <a class="sidebar-link sidebar-admin-toggle collapsed"
+                   data-bs-toggle="collapse"
+                   href="#administratorMenu"
+                   role="button"
+                   aria-expanded="false"
+                   aria-controls="administratorMenu">
+                    <i class="bi bi-shield-lock sidebar-icon"></i>
+                    <span>Administrator</span>
+                    <i class="bi bi-chevron-down sidebar-chevron"></i>
+                </a>
+
+                <div class="collapse" id="administratorMenu">
+                    <ul class="sidebar-submenu">
+
+                        <li class="sidebar-item">
+                            <a asp-controller="Facility"
+                               asp-action="Index"
+                               class="sidebar-link sidebar-sublink">
+                                <i class="bi bi-hospital sidebar-icon"></i>
+                                <span>Facility</span>
+                            </a>
+                        </li>
+
+                        <li class="sidebar-item">
+                            <a asp-controller="Shipment"
+                               asp-action="Index"
+                               class="sidebar-link sidebar-sublink">
+                                <i class="bi bi-box-seam sidebar-icon"></i>
+                                <span>Shipments</span>
+                            </a>
+                        </li>
+
+                        <li class="sidebar-item">
+                            <a asp-controller="UserManagement"
+                               asp-action="Index"
+                               class="sidebar-link sidebar-sublink">
+                                <i class="bi bi-people sidebar-icon"></i>
+                                <span>Manage Users</span>
+                            </a>
+                        </li>
+
+                        <li class="sidebar-item">
+                            <a asp-controller="UserManagement"
+                               asp-action="CreateUser"
+                               class="sidebar-link sidebar-sublink">
+                                <i class="bi bi-person-plus sidebar-icon"></i>
+                                <span>Create User</span>
+                            </a>
+                        </li>
+
+                        <li class="sidebar-item">
+                            <a asp-controller="AuditLog"
+                               asp-action="Index"
+                               class="sidebar-link sidebar-sublink">
+                                <i class="bi bi-journal-text sidebar-icon"></i>
+                                <span>Audit Logs</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+        }
+
+        <!-- Approval Queue: System Administrator, Data Export Approver -->
+        @if (User.IsInRole(AppRoles.SystemAdministrator)
+                || User.IsInRole(AppRoles.DataExportApprover))
+        {
+            <li class="sidebar-item sidebar-approval-queue">
+                <a asp-controller="ApprovalQueue"
+                   asp-action="Index"
+                   class="sidebar-link">
+                    <i class="bi bi-clipboard-check sidebar-icon"></i>
+                    <span>Approval Queue</span>
+                </a>
+            </li>
+        }
+
+    </ul>
+</nav>
+
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>

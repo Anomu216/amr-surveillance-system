@@ -1,0 +1,246 @@
+﻿@model IEnumerable<AMRSurveillance.ViewModels.GeneReferenceViewModel>
+
+@{
+    ViewData["Title"] = "Gene Reference";
+}
+
+<div class="container-fluid px-2">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h4 class="mb-0">Gene Reference</h4>
+
+        <a asp-controller="GeneReference"
+           asp-action="Create"
+           class="btn btn-sm btn-primary">
+            + Add Gene
+        </a>
+    </div>
+
+    <form asp-controller="GeneReference"
+          asp-action="Index"
+          method="get"
+          class="mb-2">
+        <div class="input-group input-group-sm" style="max-width: 360px;">
+            <input type="text"
+                   name="search"
+                   value="@Context.Request.Query["search"]"
+                   class="form-control"
+                   placeholder="Search gene reference..." />
+
+            <button type="submit" class="btn btn-outline-secondary">
+                Search
+            </button>
+
+            <a asp-action="Index"
+               class="btn btn-outline-secondary">
+                Clear
+            </a>
+        </div>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table table-sm table-striped table-hover table-bordered align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Gene Name</th>
+                    <th>Description</th>
+                    <th>Category</th>
+                    <th>Applicable Organism</th>
+                    <th class="text-center">Active</th>
+                    <th class="text-center" style="width: 145px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="text-nowrap">@item.GeneName</td>
+                            <td>@item.GeneDescription</td>
+                            <td class="text-nowrap">@item.GeneCategory</td>
+                            <td>@item.ApplicableOrganism</td>
+                            <td class="text-center">
+                                @if (item.IsActive)
+                                {
+                                    <span class="badge bg-success">Yes</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">No</span>
+                                }
+                            </td>
+                            <td class="text-center text-nowrap">
+                                <div class="d-inline-flex gap-1">
+                                    <a asp-controller="GeneReference"
+                                       asp-action="Details"
+                                       asp-route-id="@item.GeneName"
+                                       class="btn btn-outline-info"
+                                       style="font-size: 10px; padding: 2px 5px;"
+                                       title="Details">
+                                        View
+                                    </a>
+
+                                    <a asp-controller="GeneReference"
+                                       asp-action="Edit"
+                                       asp-route-id="@item.GeneName"
+                                       class="btn btn-outline-primary"
+                                       style="font-size: 10px; padding: 2px 5px;"
+                                       title="Edit">
+                                        Edit
+                                    </a>
+
+                                    <button type="button"
+                                            class="btn btn-outline-danger btn-delete-gene"
+                                            style="font-size: 10px; padding: 2px 5px;"
+                                            data-gene-name="@item.GeneName"
+                                            data-check-url="@Url.Action("CheckDelete", "GeneReference")"
+                                            data-delete-url="@Url.Action("Delete", "GeneReference")">
+                                        Delete
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-3">
+                            No gene references found.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- One shared confirmation modal for all rows -->
+<div class="modal fade"
+     id="deleteGeneModal"
+     tabindex="-1"
+     aria-labelledby="deleteGeneModalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header py-2 bg-danger text-white">
+                <h6 class="modal-title" id="deleteGeneModalLabel">
+                    Confirm Deletion
+                </h6>
+                <button type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"
+                        aria-label="Close">
+                </button>
+            </div>
+
+            <div class="modal-body small">
+                <p class="mb-2">
+                    Gene: <strong id="deleteGeneName"></strong>
+                </p>
+
+                <div id="deleteGeneStatus"
+                     class="alert alert-info py-2 mb-0"
+                     role="alert">
+                    Checking the corresponding Genomics column...
+                </div>
+            </div>
+
+            <div class="modal-footer py-2">
+                <button type="button"
+                        class="btn btn-sm btn-secondary"
+                        data-bs-dismiss="modal">
+                    Cancel
+                </button>
+
+                <form id="deleteGeneForm"
+                      method="post">
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden" name="id" id="deleteGeneId" />
+
+                    <button type="submit"
+                            class="btn btn-sm btn-danger"
+                            id="confirmDeleteGene"
+                            disabled>
+                        Yes, Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const modalElement = document.getElementById("deleteGeneModal");
+            const modal = new bootstrap.Modal(modalElement);
+            const geneNameElement = document.getElementById("deleteGeneName");
+            const geneIdElement = document.getElementById("deleteGeneId");
+            const statusElement = document.getElementById("deleteGeneStatus");
+            const confirmButton = document.getElementById("confirmDeleteGene");
+            const deleteForm = document.getElementById("deleteGeneForm");
+
+            document.querySelectorAll(".btn-delete-gene").forEach(function (button) {
+                button.addEventListener("click", async function () {
+                    const geneName = button.dataset.geneName;
+                    const checkUrl = button.dataset.checkUrl;
+                    const deleteUrl = button.dataset.deleteUrl;
+
+                    geneNameElement.textContent = geneName;
+                    geneIdElement.value = geneName;
+                    deleteForm.action = deleteUrl;
+                    confirmButton.disabled = true;
+                    statusElement.className = "alert alert-info py-2 mb-0";
+                    statusElement.textContent =
+                        "Checking the corresponding Genomics column...";
+
+                    modal.show();
+
+                    try {
+                        const url = new URL(checkUrl, window.location.origin);
+                        url.searchParams.set("id", geneName);
+
+                        const response = await fetch(url, {
+                            method: "GET",
+                            headers: { "Accept": "application/json" }
+                        });
+
+                        if (!response.ok) {
+                            throw new Error("The server could not check the gene column.");
+                        }
+
+                        const result = await response.json();
+
+                        if (result.hasRecordedValues === true) {
+                            statusElement.className =
+                                "alert alert-danger py-2 mb-0";
+                            statusElement.textContent =
+                                "Recorded values (0 or 1) exist in the Genomics column. " +
+                                "Deleting this gene would remove the column and its data. " +
+                                "Deletion is blocked.";
+                            confirmButton.disabled = true;
+                        } else if (result.hasRecordedValues === false) {
+                            statusElement.className =
+                                "alert alert-warning py-2 mb-0";
+                            statusElement.textContent =
+                                "No recorded values found. Confirming will delete the " +
+                                "gene reference and its corresponding Genomics column.";
+                            confirmButton.disabled = false;
+                        } else {
+                            throw new Error("The server returned an unexpected response.");
+                        }
+                    } catch (error) {
+                        statusElement.className =
+                            "alert alert-danger py-2 mb-0";
+                        statusElement.textContent =
+                            "Could not verify recorded values. Deletion is disabled. " +
+                            "Please try again or contact the system administrator.";
+                        confirmButton.disabled = true;
+                    }
+                });
+            });
+        });
+    </script>
+}

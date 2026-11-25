@@ -1,0 +1,276 @@
+﻿@model AMRSurveillance.ViewModels.ReferenceDataDashboardViewModel
+
+@{
+    ViewData["Title"] = "Reference Data";
+}
+
+<div class="container-fluid">
+
+    <!-- ============================================= -->
+    <!-- Header -->
+    <!-- ============================================= -->
+
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-5">
+        <div>
+            <h2 class="fw-bold mb-1">
+                Reference Data
+            </h2>
+            <p class="text-muted mb-0">
+                Configure and maintain master reference tables used throughout the
+                AMR Surveillance System.
+            </p>
+        </div>
+    </div>
+
+    <!-- ============================================= -->
+    <!-- Statistics -->
+    <!-- ============================================= -->
+
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-5 g-4 mb-5">
+
+        <!-- Antibiotic Categories -->
+        <div class="col">
+            <div class="card border-0 shadow-sm h-100 text-center">
+                <div class="card-body">
+                    <h1 class="display-5 fw-bold text-primary">
+                        @Model.AntibioticClassCount
+                    </h1>
+                    <div class="text-muted">
+                        Antibiotic Categories
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Antibiotics -->
+        <div class="col">
+            <div class="card border-0 shadow-sm h-100 text-center">
+                <div class="card-body">
+                    <h1 class="display-5 fw-bold text-success">
+                        @Model.AntibioticCount
+                    </h1>
+                    <div class="text-muted">
+                        Antibiotics
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AST Cards -->
+        <div class="col">
+            <div class="card border-0 shadow-sm h-100 text-center">
+                <div class="card-body">
+                    <h1 class="display-5 fw-bold text-info">
+                        @Model.ASTCardCount
+                    </h1>
+                    <div class="text-muted">
+                        AST Cards
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Organisms -->
+        <div class="col">
+            <div class="card border-0 shadow-sm h-100 text-center">
+                <div class="card-body">
+                    <h1 class="display-5 fw-bold text-warning">
+                        @Model.OrganismCount
+                    </h1>
+                    <div class="text-muted">
+                        Organisms
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Intrinsic Resistance -->
+        <div class="col">
+            <div class="card border-0 shadow-sm h-100 text-center">
+                <div class="card-body">
+                    <h1 class="display-5 fw-bold text-danger">
+                        @Model.IntrinsicResistanceCount
+                    </h1>
+                    <div class="text-muted">
+                        Intrinsic Resistance Rules
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ============================================= -->
+    <!-- Modules -->
+    <!-- ============================================= -->
+
+    <div class="row g-4">
+
+        <!-- Antibiotic Categories -->
+        <div class="col-12 col-lg-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h4>
+                                <i class="bi bi-collection text-primary me-2"></i>
+                                Antibiotic Categories
+                            </h4>
+                            <p class="text-muted mb-0">
+                                Organize antibiotics into antibiotic categories.
+                            </p>
+                        </div>
+                        <span class="badge bg-primary fs-6">
+                            @Model.AntibioticClassCount
+                        </span>
+                    </div>
+
+                    <div class="mt-auto">
+                        <a asp-controller="AntibioticClass"
+                           asp-action="Index"
+                           class="btn btn-primary">
+                            Manage
+                            <i class="bi bi-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Antibiotics -->
+        <div class="col-12 col-lg-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h4>
+                                <i class="bi bi-capsule text-success me-2"></i>
+                                Antibiotics
+                            </h4>
+                            <p class="text-muted mb-0">
+                                Manage antibiotics used in AST.
+                            </p>
+                        </div>
+                        <span class="badge bg-success fs-6">
+                            @Model.AntibioticCount
+                        </span>
+                    </div>
+
+                    <div class="mt-auto">
+                        <a asp-controller="Antibiotic"
+                           asp-action="Index"
+                           class="btn btn-success">
+                            Manage
+                            <i class="bi bi-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AST Cards -->
+        <div class="col-12 col-lg-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h4>
+                                <i class="bi bi-grid-3x3-gap text-info me-2"></i>
+                                AST Cards
+                            </h4>
+                            <p class="text-muted mb-0">
+                                Configure AST cards, mapped organisms, and antibiotic panel display order.
+                            </p>
+                        </div>
+                        <span class="badge bg-info text-dark fs-6">
+                            @Model.ASTCardCount
+                        </span>
+                    </div>
+
+                    <div class="mt-auto">
+                        <a asp-controller="ASTCard"
+                           asp-action="Index"
+                           class="btn btn-info text-dark">
+                            Manage
+                            <i class="bi bi-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Organisms -->
+        <div class="col-12 col-lg-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h4>
+                                <i class="bi bi-bug text-warning me-2"></i>
+                                Organisms
+                            </h4>
+                            <p class="text-muted mb-0">
+                                Maintain the WHONET organism reference list.
+                            </p>
+                        </div>
+                        <span class="badge bg-warning text-dark fs-6">
+                            @Model.OrganismCount
+                        </span>
+                    </div>
+
+                    <div class="mt-auto">
+                        <a asp-controller="Organism"
+                           asp-action="Index"
+                           class="btn btn-warning">
+                            Manage
+                            <i class="bi bi-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Intrinsic Resistance -->
+        <div class="col-12 col-lg-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h4>
+                                <i class="bi bi-shield-check text-danger me-2"></i>
+                                Intrinsic Resistance
+                            </h4>
+                            <p class="text-muted mb-0">
+                                Configure organism–antibiotic intrinsic resistance relationships.
+                            </p>
+                        </div>
+                        <span class="badge bg-danger fs-6">
+                            @Model.IntrinsicResistanceCount
+                        </span>
+                    </div>
+
+                    <div class="mt-auto">
+                        <a asp-controller="IntrinsicResistance"
+                           asp-action="Index"
+                           class="btn btn-danger">
+                            Manage
+                            <i class="bi bi-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ============================================= -->
+    <!-- Footer -->
+    <!-- ============================================= -->
+
+    <div class="alert alert-success mt-5">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        <strong>Reference Database Status:</strong>
+        Prepare the reference tables before entering laboratory surveillance data.
+    </div>
+
+</div>

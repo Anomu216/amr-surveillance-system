@@ -1,0 +1,193 @@
+﻿@model AMRSurveillance.ViewModels.PatientViewModel
+
+@{
+    ViewData["Title"] = "Edit Participant";
+
+    ViewData["PageTitle"] = "Edit Participant";
+    ViewData["PageSubtitle"] =
+        $"Update information for participant {Model.PatientID}.";
+}
+
+<div class="position-relative">
+
+    <partial name="_PageHeader" />
+
+    <div class="position-absolute top-0 end-0">
+
+        <a asp-controller="Patient"
+           asp-action="Create"
+           class="btn btn-outline-secondary">
+
+            <i class="bi bi-arrow-left"></i>
+            Back to Registration
+
+        </a>
+
+    </div>
+
+</div>
+
+
+<!-- ========================================= -->
+<!-- EDIT PATIENT -->
+<!-- ========================================= -->
+
+<form asp-action="Edit"
+      method="post"
+      id="patientForm">
+
+    <div asp-validation-summary="ModelOnly"
+         class="text-danger mb-3">
+    </div>
+
+    <!-- Preserve the original Patient ID -->
+
+    <input asp-for="PatientID"
+           type="hidden" />
+
+    <div class="row">
+
+        <!-- ========================================= -->
+        <!-- LEFT NAVIGATION -->
+        <!-- ========================================= -->
+
+        <div class="col-lg-3">
+
+            <partial name="_PatientNavigation" />
+
+        </div>
+
+
+        <!-- ========================================= -->
+        <!-- QUESTIONNAIRE -->
+        <!-- ========================================= -->
+
+        <div class="col-lg-9">
+
+            <!-- Patient & Sample Information -->
+
+            <div id="sample"
+                 class="question-section active">
+
+                <partial name="Sections/_SampleInformation" />
+
+            </div>
+
+
+            <!-- Demographics -->
+
+            <div id="demographics"
+                 class="question-section d-none">
+
+                <partial name="Sections/_Demographics" />
+
+            </div>
+
+
+            <!-- Risk Factors -->
+
+            <div id="risk"
+                 class="question-section d-none">
+
+                <partial name="Sections/_RiskFactors" />
+
+            </div>
+
+
+            <!-- Clinical Presentation -->
+
+            <div id="clinical"
+                 class="question-section d-none">
+
+                <partial name="Sections/_ClinicalPresentation" />
+
+            </div>
+
+
+            <!-- Clinical Assessment -->
+
+            <div id="assessment"
+                 class="question-section d-none">
+
+                <partial name="Sections/_ClinicalAssessment" />
+
+            </div>
+
+
+            <!-- Antibiotic History -->
+
+            <div id="antibiotics"
+                 class="question-section d-none">
+
+                <partial name="Sections/_AntibioticsHistory" />
+
+            </div>
+
+
+            <!-- Consent -->
+
+            <div id="consent"
+                 class="question-section d-none">
+
+                <partial name="Sections/_Consent" />
+
+            </div>
+
+
+            <!-- Navigation Buttons -->
+
+            <div class="card mt-4">
+
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-between">
+
+                        <button type="button"
+                                id="btnPrevious"
+                                class="btn btn-outline-secondary">
+
+                            <i class="bi bi-chevron-left"></i>
+                            Previous
+
+                        </button>
+
+
+                        <button type="submit"
+                                id="btnSave"
+                                class="btn btn-success">
+
+                            <i class="bi bi-floppy"></i>
+                            Update Patient
+
+                        </button>
+
+
+                        <button type="button"
+                                id="btnNext"
+                                class="btn btn-primary">
+
+                            Next
+                            <i class="bi bi-chevron-right"></i>
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</form>
+
+
+@section Scripts
+{
+    <partial name="_ValidationScriptsPartial" />
+
+    <script src="~/js/patient.js"
+            asp-append-version="true"></script>
+}

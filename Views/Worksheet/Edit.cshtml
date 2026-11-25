@@ -1,0 +1,559 @@
+﻿@model AMRSurveillance.ViewModels.WorksheetViewModel
+
+@{
+    ViewData["Title"] = "Edit Worksheet";
+    ViewData["ActivePage"] = "Worksheet";
+    var cardOrganismsMap = ViewBag.CardOrganisms as Dictionary<string, string>;
+    var cardOrdersMap = ViewBag.AntibioticCardOrders as Dictionary<string, string>;
+}
+
+<div class="container-fluid">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Edit Worksheet</h2>
+            <p class="text-muted mb-0">
+                Enter laboratory identification and antimicrobial susceptibility results.
+            </p>
+        </div>
+
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i>
+            Back to Worksheet
+        </a>
+    </div>
+
+    <form asp-action="Edit"
+          asp-route-id="@Model.IsolateID"
+          method="post"
+          id="worksheetForm"
+          data-intrinsic-map='@Html.Raw(ViewBag.IntrinsicResistancesJson ?? "{}")'>
+
+        @Html.AntiForgeryToken()
+
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+        <!-- BASIC INFORMATION -->
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Basic Information</h5>
+            </div>
+
+            <div class="card-body">
+                <div class="row g-3">
+
+                    <!-- Patient ID (First) -->
+                    <div class="col-md-3">
+                        <label asp-for="PatientID" class="form-label">Patient ID</label>
+                        <input asp-for="PatientID"
+                               class="form-control"
+                               autocomplete="off"
+                               spellcheck="false" />
+                        <span asp-validation-for="PatientID" class="text-danger"></span>
+                    </div>
+
+                    <!-- Isolate ID (Second) -->
+                    <div class="col-md-3">
+                        <label asp-for="IsolateID" class="form-label">Isolate ID</label>
+                        <input asp-for="IsolateID"
+                               class="form-control"
+                               autocomplete="off"
+                               readonly />
+                        <span asp-validation-for="IsolateID" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label asp-for="CultureResult" class="form-label">Culture Result</label>
+                        <select asp-for="CultureResult"
+                                class="form-select"
+                                id="CultureResult">
+                            <option value="">-- Select Culture Result --</option>
+                            <option value="Growth">Growth</option>
+                            <option value="No Growth">No Growth</option>
+                            <option value="Rejected">Rejected</option>
+                        </select>
+                        <span asp-validation-for="CultureResult" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label asp-for="ManuscriptID" class="form-label">Manuscript ID</label>
+                        <input asp-for="ManuscriptID"
+                               class="form-control"
+                               autocomplete="off" />
+                        <span asp-validation-for="ManuscriptID" class="text-danger"></span>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- ORGANISM IDENTIFICATION -->
+
+        <div id="organismIdentificationSection"
+             class="card shadow-sm mb-4 d-none">
+
+            <div class="card-header">
+                <h5 class="mb-0">Organism Identification</h5>
+            </div>
+
+            <div class="card-body">
+                <div class="row g-3">
+
+                    <div class="col-md-6">
+                        <label asp-for="AcceptedID" class="form-label">Accepted ID</label>
+                        <input asp-for="AcceptedID"
+                               class="form-control"
+                               id="AcceptedID"
+                               autocomplete="off" />
+                        <span asp-validation-for="AcceptedID" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="WHONETID" class="form-label">Organism</label>
+                        <select asp-for="WHONETID"
+                                asp-items="Model.WHONETIDs"
+                                class="form-select"
+                                id="WHONETID">
+                            <option value="">-- Select Organism --</option>
+                        </select>
+                        <span asp-validation-for="WHONETID" class="text-danger"></span>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- LABORATORY CHARACTERISTICS -->
+
+        <div id="laboratoryCharacteristicsSection"
+             class="card shadow-sm mb-4 d-none">
+
+            <div class="card-header">
+                <h5 class="mb-0">Laboratory Characteristics</h5>
+            </div>
+
+            <div class="card-body">
+                <div class="row g-3">
+
+                    <div class="col-md-4">
+                        <label asp-for="GramReaction" class="form-label">Gram Reaction</label>
+                        <select asp-for="GramReaction" class="form-select" id="GramReaction">
+                            <option value="">-- Select --</option>
+                            <option value="Negative">Negative</option>
+                            <option value="Positive">Positive</option>
+                            <option value="Variable">Variable</option>
+                        </select>
+                        <span asp-validation-for="GramReaction" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label asp-for="Morphology" class="form-label">Morphology</label>
+                        <select asp-for="Morphology" class="form-select" id="Morphology">
+                            <option value="">-- Select --</option>
+                            <option value="Cocci">Cocci</option>
+                            <option value="Bacilli">Bacilli</option>
+                            <option value="Cocobacilli">Cocobacilli</option>
+                            <option value="Spirochete">Spirochete</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        <span asp-validation-for="Morphology" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label asp-for="Hemolysis" class="form-label">Hemolysis</label>
+                        <select asp-for="Hemolysis" class="form-select" id="Hemolysis">
+                            <option value="">-- Select --</option>
+                            <option value="Alpha">Alpha</option>
+                            <option value="Beta">Beta</option>
+                            <option value="Gamma">Gamma</option>
+                            <option value="not done">not done</option>
+                            <option value="not applicable">not applicable</option>
+                        </select>
+                        <span asp-validation-for="Hemolysis" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label asp-for="LactoseFermentation" class="form-label">Lactose</label>
+                        <select asp-for="LactoseFermentation"
+                                class="form-select"
+                                id="LactoseFermentation">
+                            <option value="">-- Select --</option>
+                            <option value="Positive">Positive</option>
+                            <option value="Negative">Negative</option>
+                            <option value="Weak">Weak</option>
+                            <option value="Late">Late</option>
+                            <option value="not done">not done</option>
+                            <option value="not applicable">not applicable</option>
+                        </select>
+                        <span asp-validation-for="LactoseFermentation" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label asp-for="Catalase" class="form-label">Catalase</label>
+                        <select asp-for="Catalase" class="form-select" id="Catalase">
+                            <option value="">-- Select --</option>
+                            <option value="Positive">Positive</option>
+                            <option value="Negative">Negative</option>
+                            <option value="not done">not done</option>
+                            <option value="not applicable">not applicable</option>
+                        </select>
+                        <span asp-validation-for="Catalase" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label asp-for="Coagulase" class="form-label">Coagulase</label>
+                        <select asp-for="Coagulase" class="form-select" id="Coagulase">
+                            <option value="">-- Select --</option>
+                            <option value="Positive">Positive</option>
+                            <option value="Negative">Negative</option>
+                            <option value="not done">not done</option>
+                            <option value="not applicable">not applicable</option>
+                        </select>
+                        <span asp-validation-for="Coagulase" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label asp-for="Oxidase" class="form-label">Oxidase</label>
+                        <select asp-for="Oxidase" class="form-select" id="Oxidase">
+                            <option value="">-- Select --</option>
+                            <option value="Positive">Positive</option>
+                            <option value="Negative">Negative</option>
+                            <option value="not done">not done</option>
+                            <option value="not applicable">not applicable</option>
+                        </select>
+                        <span asp-validation-for="Oxidase" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-12">
+                        <label asp-for="Comments" class="form-label">Laboratory Comments</label>
+                        <textarea asp-for="Comments"
+                                  class="form-control"
+                                  rows="3"></textarea>
+                        <span asp-validation-for="Comments" class="text-danger"></span>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- AST CARDS -->
+
+        <div id="astCardsSection" class="card shadow-sm mb-4 d-none">
+            <div class="card-header">
+                <h5 class="mb-0">AST Cards</h5>
+            </div>
+
+            <div class="card-body">
+                <p class="text-muted">
+                    Select one or more AST cards used for this isolate.
+                </p>
+
+                <div class="row g-3">
+                    @foreach (var card in Model.AvailableASTCards)
+                    {
+                        var isChecked = Model.ASTCards != null &&
+                        Model.ASTCards.Contains(
+                        card.Value,
+                        StringComparer.OrdinalIgnoreCase);
+
+                        var allowedOrgs = (cardOrganismsMap != null &&
+                        cardOrganismsMap.TryGetValue(card.Value, out var orgs))
+                        ? orgs
+                        : string.Empty;
+
+                        <div class="col-md-3 col-lg-2 ast-card-option">
+                            <div class="form-check">
+                                <input type="checkbox"
+                                       class="form-check-input ast-card-checkbox"
+                                       name="ASTCards"
+                                       value="@card.Value"
+                                       id="astCard_@card.Value"
+                                       data-organisms="@allowedOrgs"
+                                       checked="@isChecked" />
+
+                                <label class="form-check-label" for="astCard_@card.Value">
+                                    @card.Text
+                                </label>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- AST RESULTS -->
+
+        <div id="astResultsSection" class="card shadow-sm mb-4 d-none">
+            <div class="card-header">
+                <h5 class="mb-0">Antimicrobial Susceptibility Testing</h5>
+            </div>
+
+            <div class="card-body">
+                <div id="astNoSelectionMessage" class="alert alert-info">
+                    Select an AST card to display the applicable antibiotics.
+                </div>
+
+                <div id="astResultsContainer" class="table-responsive d-none">
+                    <table class="table table-bordered table-hover align-middle"
+                           id="astResultsTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Antibiotic</th>
+                                <th>Class</th>
+                                <th>MIC</th>
+                                <th>Interpretation</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @for (var i = 0; i < Model.Antibiotics.Count; i++)
+                            {
+                                var antibiotic = Model.Antibiotics[i];
+                                var perCardOrders = (cardOrdersMap != null &&
+                                cardOrdersMap.TryGetValue(antibiotic.AntibioticCode, out var orders))
+                                ? orders
+                                : string.Empty;
+
+                                <tr class="ast-antibiotic-row"
+                                    data-ast-cards="@antibiotic.ASTCard"
+                                    data-card-orders="@perCardOrders"
+                                    data-card-order="@antibiotic.CardDisplayOrder"
+                                    data-antibiotic-code="@antibiotic.AntibioticCode"
+                                    data-antibiotic-name="@antibiotic.AntibioticName"
+                                    data-antibiotic-class="@antibiotic.AntibioticClassName"
+                                    data-intrinsic="@(antibiotic.IsIntrinsicallyResistant ? "true" : "false")">
+
+                                    <td>
+                                        <strong>@antibiotic.AntibioticName</strong>
+                                        <div class="small text-muted">
+                                            @antibiotic.AntibioticCode
+                                        </div>
+
+                                        <input type="hidden"
+                                               name="Antibiotics.Index"
+                                               value="@i" />
+                                        <input type="hidden"
+                                               asp-for="Antibiotics[i].AntibioticCode" />
+                                        <input type="hidden"
+                                               asp-for="Antibiotics[i].AntibioticName" />
+                                        <input type="hidden"
+                                               asp-for="Antibiotics[i].AntibioticClassName" />
+                                        <input type="hidden"
+                                               asp-for="Antibiotics[i].ASTCard" />
+                                        <input type="hidden"
+                                               asp-for="Antibiotics[i].MICEnabled" />
+                                        <input type="hidden"
+                                               asp-for="Antibiotics[i].InterpretationEnabled" />
+                                        <input type="hidden"
+                                               asp-for="Antibiotics[i].IsIntrinsicallyResistant" />
+                                    </td>
+
+                                    <td>@antibiotic.AntibioticClassName</td>
+
+                                    <td>
+                                        @if (antibiotic.MICEnabled)
+                                        {
+                                            <input asp-for="Antibiotics[i].MIC"
+                                                   class="form-control form-control-sm"
+                                                   autocomplete="off" />
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">N/A</span>
+                                        }
+                                    </td>
+
+                                    <td>
+                                        @if (antibiotic.InterpretationEnabled)
+                                        {
+                                            <input asp-for="Antibiotics[i].Interpretation"
+                                                   type="hidden" />
+
+                                            <div class="btn-group ast-interpretation-selector"
+                                                 role="group"
+                                                 data-target="Antibiotics_@(i)__Interpretation">
+
+                                                <button type="button"
+                                                        class="btn btn-outline-success ast-interpretation-btn @(antibiotic.Interpretation == "S" ? "active" : "")"
+                                                        data-value="S"
+                                                        aria-pressed="@(antibiotic.Interpretation == "S" ? "true" : "false")">
+                                                    S
+                                                </button>
+
+                                                <button type="button"
+                                                        class="btn btn-outline-warning ast-interpretation-btn @(antibiotic.Interpretation == "I" ? "active" : "")"
+                                                        data-value="I"
+                                                        aria-pressed="@(antibiotic.Interpretation == "I" ? "true" : "false")">
+                                                    I
+                                                </button>
+
+                                                <button type="button"
+                                                        class="btn btn-outline-danger ast-interpretation-btn @(antibiotic.Interpretation == "R" ? "active" : "")"
+                                                        data-value="R"
+                                                        aria-pressed="@(antibiotic.Interpretation == "R" ? "true" : "false")">
+                                                    R
+                                                </button>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">N/A</span>
+                                        }
+                                    </td>
+
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- AST FINDINGS -->
+
+        <div id="astFindingsSection" class="card shadow-sm mb-4 d-none">
+            <div class="card-header">
+                <h5 class="mb-0">AST Findings</h5>
+            </div>
+
+            <div class="card-body">
+                <div class="row g-3">
+
+                    <div id="esblField" class="col-md-4 d-none">
+                        <label asp-for="ESBL" class="form-label">ESBL</label>
+                        <select asp-for="ESBL" class="form-select" id="ESBL">
+                            <option value="">-- Select --</option>
+                            <option value="POS">POS</option>
+                            <option value="NEG">NEG</option>
+                        </select>
+                        <span asp-validation-for="ESBL" class="text-danger"></span>
+                    </div>
+
+                    <div id="cefoxitinField" class="col-md-4 d-none">
+                        <label asp-for="CefoxitinScreen" class="form-label">
+                            Cefoxitin Screen
+                        </label>
+                        <select asp-for="CefoxitinScreen"
+                                class="form-select"
+                                id="CefoxitinScreen">
+                            <option value="">-- Select --</option>
+                            <option value="POS">POS</option>
+                            <option value="NEG">NEG</option>
+                        </select>
+                        <span asp-validation-for="CefoxitinScreen" class="text-danger"></span>
+                    </div>
+
+                    <div id="inducibleClindamycinField" class="col-md-4 d-none">
+                        <label asp-for="InducibleClindamycinResistance"
+                               class="form-label">
+                            Inducible Clindamycin Resistance
+                        </label>
+                        <select asp-for="InducibleClindamycinResistance"
+                                class="form-select"
+                                id="InducibleClindamycinResistance">
+                            <option value="">-- Select --</option>
+                            <option value="POS">POS</option>
+                            <option value="NEG">NEG</option>
+                        </select>
+                        <span asp-validation-for="InducibleClindamycinResistance"
+                              class="text-danger"></span>
+                    </div>
+
+                    <div class="col-12">
+                        <label asp-for="ASTComments" class="form-label">
+                            AST Comments
+                        </label>
+                        <textarea asp-for="ASTComments"
+                                  class="form-control"
+                                  rows="3"></textarea>
+                        <span asp-validation-for="ASTComments" class="text-danger"></span>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Derived QC Categories -->
+        <div class="card mt-4" id="derivedResultsSection">
+            <div class="card-header">
+                <h5 class="mb-0">Derived QC Categories</h5>
+            </div>
+
+            <div class="card-body">
+                <div class="row g-3">
+
+                    <!-- MDR -->
+                    <div class="col-md-4">
+                        <label class="form-label" for="MDRDisplay">
+                            Multidrug Resistance (MDR)
+                        </label>
+                        <input type="text"
+                               id="MDRDisplay"
+                               class="form-control fw-bold text-center"
+                               value="Unknown"
+                               readonly />
+                        <small id="MDRReason" class="form-text text-muted"></small>
+                    </div>
+
+                    <!-- MRSA -->
+                    <div class="col-md-4" id="mrsaResult">
+                        <label class="form-label" for="MRSA">
+                            MRSA
+                        </label>
+                        <input type="text"
+                               id="MRSA"
+                               class="form-control"
+                               value="Unknown"
+                               readonly />
+                        <small id="MRSAReason" class="form-text text-muted"></small>
+                    </div>
+
+                    <!-- Carbapenemase -->
+                    <div class="col-md-4">
+                        <label class="form-label" for="CarbapenemaseDisplay">
+                            Carbapenemase
+                        </label>
+                        <input type="text"
+                               id="CarbapenemaseDisplay"
+                               class="form-control"
+                               value="Not calculated"
+                               readonly />
+                        <small id="CarbapenemaseReason"
+                               class="form-text text-muted"></small>
+                    </div>
+
+                </div>
+
+                <div class="mt-3">
+                    <label class="form-label fw-semibold">
+                        Derived QC Categories
+                    </label>
+                    <div id="derivedQCClasses" class="form-control bg-light">
+                        Results will be calculated from the selected AST results.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ACTIONS -->
+
+        <div class="d-flex justify-content-end gap-2 mb-5 mt-4">
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                Cancel
+            </a>
+
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save"></i>
+                Save Worksheet
+            </button>
+        </div>
+
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/worksheet.js"
+            asp-append-version="true"></script>
+}

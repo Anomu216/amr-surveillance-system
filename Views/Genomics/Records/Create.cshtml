@@ -1,0 +1,394 @@
+﻿@model AMRSurveillance.ViewModels.GenomicsRecordViewModel
+
+@{
+    ViewData["Title"] = "Add Genomics Record";
+
+    var registeredGenes = ViewBag.RegisteredGeneNames as IEnumerable<string>
+        ?? Enumerable.Empty<string>();
+}
+
+<div class="container-fluid py-4">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">Add Genomics Record</h2>
+            <p class="text-muted mb-0">
+                Register sequencing metadata and gene detection results for an isolate.
+            </p>
+        </div>
+
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>
+            Back to Records
+        </a>
+    </div>
+
+    <form asp-action="Create" method="post" data-genomics-form>
+        @Html.AntiForgeryToken()
+
+        <div asp-validation-summary="ModelOnly"
+             class="alert alert-danger"
+             role="alert"></div>
+
+        <!-- 1. Isolate identification -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-semibold">
+                    <i class="bi bi-upc-scan me-2 text-primary"></i>
+                    Isolate Identification
+                </h5>
+            </div>
+
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-12 col-md-4">
+                        <label asp-for="IsolateID" class="form-label fw-semibold">
+                            Isolate ID <span class="text-danger">*</span>
+                        </label>
+                        <input asp-for="IsolateID"
+                               class="form-control"
+                               maxlength="20"
+                               placeholder="e.g AMR/BSA/001-WSA"
+                               required />
+                        <span asp-validation-for="IsolateID"
+                              class="text-danger"></span>
+                        <div class="form-text">
+                            Enter the IsolateID exactly as registered in Worksheet.
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label asp-for="KENID" class="form-label">KEN ID</label>
+                        <input asp-for="KENID" class="form-control" />
+                        <span asp-validation-for="KENID" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label asp-for="MRSNID" class="form-label">MRSN ID</label>
+                        <input asp-for="MRSNID" class="form-control" />
+                        <span asp-validation-for="MRSNID" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label asp-for="DNASampleID" class="form-label">DNA Sample ID</label>
+                        <input asp-for="DNASampleID" class="form-control" />
+                        <span asp-validation-for="DNASampleID" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label asp-for="GenomicONTID" class="form-label">Genomic ONT ID</label>
+                        <input asp-for="GenomicONTID" class="form-control" />
+                        <span asp-validation-for="GenomicONTID" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label asp-for="GenomicILMID" class="form-label">Genomic ILM ID</label>
+                        <input asp-for="GenomicILMID" class="form-control" />
+                        <span asp-validation-for="GenomicILMID" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label asp-for="ProjectCode" class="form-label">Project Code</label>
+                        <input asp-for="ProjectCode" class="form-control" />
+                        <span asp-validation-for="ProjectCode" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label asp-for="SeqRunID" class="form-label">Sequencing Run ID</label>
+                        <input asp-for="SeqRunID" class="form-control" />
+                        <span asp-validation-for="SeqRunID" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label asp-for="SubmittingProtocol" class="form-label">
+                            Submitting Protocol
+                        </label>
+                        <input asp-for="SubmittingProtocol" class="form-control" />
+                        <span asp-validation-for="SubmittingProtocol" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label asp-for="WHONETID" class="form-label">Organism</label>
+
+                        <select asp-for="WHONETID"
+                                asp-items="ViewBag.WHONETIDs"
+                                class="form-select"
+                                id="WHONETID">
+                            <option value="">-- Select Organism --</option>
+                        </select>
+
+                        <span asp-validation-for="WHONETID"
+                              class="text-danger"></span>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label asp-for="WGSID" class="form-label">WGS ID</label>
+                        <input asp-for="WGSID" class="form-control" />
+                        <span asp-validation-for="WGSID" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Sequencing and assembly -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-semibold">
+                    <i class="bi bi-cpu me-2 text-primary"></i>
+                    Sequencing and Genome Assembly
+                </h5>
+            </div>
+
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-12 col-md-4">
+                        <label asp-for="SequencingDate" class="form-label">
+                            Sequencing Date
+                        </label>
+                        <input asp-for="SequencingDate"
+                               type="date"
+                               class="form-control" />
+                        <span asp-validation-for="SequencingDate"
+                              class="text-danger"></span>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label asp-for="GenomeLength" class="form-label">
+                            Genome Length (bp)
+                        </label>
+                        <input asp-for="GenomeLength"
+                               type="number"
+                               min="0"
+                               step="1"
+                               class="form-control" />
+                        <span asp-validation-for="GenomeLength"
+                              class="text-danger"></span>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label asp-for="GCPercent" class="form-label">GC Content (%)</label>
+                        <input asp-for="GCPercent"
+                               type="number"
+                               min="0"
+                               max="100"
+                               step="any"
+                               class="form-control" />
+                        <span asp-validation-for="GCPercent" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label asp-for="NoOfContigs" class="form-label">Number of Contigs</label>
+                        <input asp-for="NoOfContigs"
+                               type="number"
+                               min="0"
+                               step="1"
+                               class="form-control" />
+                        <span asp-validation-for="NoOfContigs" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label asp-for="AssemblyN50" class="form-label">Assembly N50</label>
+                        <input asp-for="AssemblyN50"
+                               type="number"
+                               min="0"
+                               step="1"
+                               class="form-control" />
+                        <span asp-validation-for="AssemblyN50" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label asp-for="CompleteGenome" class="form-label">
+                            Complete Genome
+                        </label>
+                        <select asp-for="CompleteGenome" class="form-select">
+                            <option value="">Not recorded</option>
+                            <option value="true">Yes</option>
+                            <option value="false">No</option>
+                        </select>
+                        <span asp-validation-for="CompleteGenome" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label asp-for="NoOfPlasmids" class="form-label">
+                            Number of Plasmids
+                        </label>
+                        <input asp-for="NoOfPlasmids"
+                               type="number"
+                               min="0"
+                               step="1"
+                               class="form-control" />
+                        <span asp-validation-for="NoOfPlasmids" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Typing and classification -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-semibold">
+                    <i class="bi bi-diagram-3 me-2 text-primary"></i>
+                    Typing and Classification
+                </h5>
+            </div>
+
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-12 col-md-4">
+                        <label asp-for="StrainType" class="form-label">Strain Type</label>
+                        <input asp-for="StrainType" class="form-control" />
+                        <span asp-validation-for="StrainType" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label asp-for="Phylogroup" class="form-label">Phylogroup</label>
+                        <input asp-for="Phylogroup" class="form-control" />
+                        <span asp-validation-for="Phylogroup" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label asp-for="Serotype" class="form-label">Serotype</label>
+                        <input asp-for="Serotype" class="form-control" />
+                        <span asp-validation-for="Serotype" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label asp-for="Fimtype" class="form-label">Fim Type</label>
+                        <input asp-for="Fimtype" class="form-control" />
+                        <span asp-validation-for="Fimtype" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label asp-for="SCCmecType" class="form-label">SCCmec Type</label>
+                        <input asp-for="SCCmecType" class="form-control" />
+                        <span asp-validation-for="SCCmecType" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label asp-for="SpaType" class="form-label">Spa Type</label>
+                        <input asp-for="SpaType" class="form-control" />
+                        <span asp-validation-for="SpaType" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label asp-for="OLocus" class="form-label">O Locus</label>
+                        <input asp-for="OLocus" class="form-control" />
+                        <span asp-validation-for="OLocus" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-12 col-md-4">
+                        <label asp-for="KLocus" class="form-label">K Locus</label>
+                        <input asp-for="KLocus" class="form-control" />
+                        <span asp-validation-for="KLocus" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Scores -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-semibold">
+                    <i class="bi bi-graph-up me-2 text-primary"></i>
+                    Genomic Scores
+                </h5>
+            </div>
+
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                        <label asp-for="VirulenceScore" class="form-label">
+                            Virulence Score
+                        </label>
+                        <input asp-for="VirulenceScore"
+                               type="number"
+                               step="any"
+                               class="form-control" />
+                        <span asp-validation-for="VirulenceScore" class="text-danger"></span>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <label asp-for="ResistanceScore" class="form-label">
+                            Resistance Score
+                        </label>
+                        <input asp-for="ResistanceScore"
+                               type="number"
+                               step="any"
+                               class="form-control" />
+                        <span asp-validation-for="ResistanceScore" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. Registered gene results -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-1 fw-semibold">
+                    <i class="bi bi-shield-check me-2 text-primary"></i>
+                    Gene Detection Results
+                </h5>
+                <small class="text-muted">
+                    Leave a gene as Not recorded if it was not tested or its result is unknown.
+                </small>
+            </div>
+
+            <div class="card-body">
+                @if (registeredGenes.Any())
+                {
+                    <div class="row g-3">
+                        @foreach (var gene in registeredGenes)
+                        {
+                            var currentValue = Model.GeneValues != null
+                            && Model.GeneValues.TryGetValue(gene, out var geneValue)
+                            ? geneValue
+                            : null;
+
+                            <div class="col-12 col-md-6 col-xl-4">
+                                <label class="form-label fw-semibold">@gene</label>
+                                <select class="form-select"
+                                        name="GeneValues[@gene]">
+                                    <option value="" selected="@(currentValue == null)">
+                                        Not recorded / Unknown
+                                    </option>
+                                    <option value="true" selected="@(currentValue == true)">
+                                        Detected
+                                    </option>
+                                    <option value="false" selected="@(currentValue == false)">
+                                        Not detected
+                                    </option>
+                                </select>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info mb-0">
+                        No active genes are registered yet. Add genes in Reference Data
+                        to make them available here.
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Form actions -->
+        <div class="d-flex flex-wrap justify-content-end gap-2">
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                Cancel
+            </a>
+            <button type="reset" class="btn btn-outline-primary">
+                Reset Form
+            </button>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save me-1"></i>
+                Save Genomics Record
+            </button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/genomics.js" asp-append-version="true"></script>
+}

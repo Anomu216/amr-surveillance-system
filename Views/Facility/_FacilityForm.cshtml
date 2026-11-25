@@ -1,0 +1,74 @@
+﻿@model AMRSurveillance.ViewModels.FacilityViewModel
+
+<div class="row">
+
+    <!-- Facility Code -->
+    <div class="col-md-4 mb-3">
+        <label asp-for="FacilityID" class="form-label"></label>
+        <input asp-for="FacilityID" class="form-control" />
+        <span asp-validation-for="FacilityID" class="text-danger"></span>
+    </div>
+
+    <!-- Facility Name -->
+    <div class="col-md-8 mb-3">
+        <label asp-for="FacilityName" class="form-label"></label>
+        <input asp-for="FacilityName" class="form-control" />
+        <span asp-validation-for="FacilityName" class="text-danger"></span>
+    </div>
+
+    <!-- County -->
+    <div class="col-md-6 mb-3">
+        <label asp-for="County" class="form-label"></label>
+        <input asp-for="County" class="form-control" />
+        <span asp-validation-for="County" class="text-danger"></span>
+    </div>
+
+    <!-- Sub County -->
+    <div class="col-md-6 mb-3">
+        <label asp-for="SubCounty" class="form-label"></label>
+        <input asp-for="SubCounty" class="form-control" />
+        <span asp-validation-for="SubCounty" class="text-danger"></span>
+    </div>
+
+    <!-- Facility Level -->
+    <div class="col-md-6 mb-3">
+        <label asp-for="FacilityLevel" class="form-label"></label>
+
+        <select asp-for="FacilityLevel" class="form-select">
+            <option value="">-- Select Level --</option>
+            <option>Level 2</option>
+            <option>Level 3</option>
+            <option>Level 4</option>
+            <option>Level 5</option>
+            <option>Level 6</option>
+        </select>
+
+        <span asp-validation-for="FacilityLevel" class="text-danger"></span>
+    </div>
+
+    <!-- Ownership -->
+    <div class="col-md-6 mb-3">
+
+        <label asp-for="Ownership" class="form-label"></label>
+
+        <select asp-for="Ownership" class="form-select">
+
+            <option value="">-- Select Ownership --</option>
+
+            <option>Public</option>
+
+            <option>Private</option>
+
+            <option>Faith-Based</option>
+
+            <option>Military</option>
+
+            <option>NGO</option>
+
+        </select>
+
+        <span asp-validation-for="Ownership" class="text-danger"></span>
+
+    </div>
+
+</div>

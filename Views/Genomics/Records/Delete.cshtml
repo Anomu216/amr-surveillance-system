@@ -1,0 +1,166 @@
+﻿@model AMRSurveillance.ViewModels.GenomicsRecordViewModel
+
+@{
+    ViewData["Title"] = "Delete Genomics Record";
+}
+
+<div class="container-fluid py-4">
+
+    <!-- Page heading -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">Delete Genomics Record</h2>
+            <p class="text-muted mb-0">
+                Review the record carefully before confirming deletion.
+            </p>
+        </div>
+
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>
+            Back to Records
+        </a>
+    </div>
+
+    <!-- Warning -->
+    <div class="alert alert-warning border-0 shadow-sm" role="alert">
+        <div class="d-flex align-items-start gap-3">
+            <i class="bi bi-exclamation-triangle-fill fs-3"></i>
+            <div>
+                <h5 class="alert-heading fw-semibold">Please confirm this action</h5>
+                <p class="mb-0">
+                    You are about to delete the genomics record for this isolate.
+                    This action may be irreversible. Confirm that you have selected
+                    the correct record before proceeding.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Record summary -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0 fw-semibold">
+                <i class="bi bi-database me-2 text-primary"></i>
+                Record to Be Deleted
+            </h5>
+        </div>
+
+        <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-4">
+                <div class="rounded-3 bg-danger bg-opacity-10 text-danger p-3">
+                    <i class="bi bi-trash3 fs-2"></i>
+                </div>
+                <div>
+                    <div class="text-muted small">Isolate ID</div>
+                    <h4 class="fw-bold mb-0">@Model.IsolateID</h4>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-12 col-md-4">
+                    <div class="text-muted small mb-1">KEN ID</div>
+                    <div class="fw-semibold">
+                        @(string.IsNullOrWhiteSpace(Model.KENID) ? "—" : Model.KENID)
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="text-muted small mb-1">MRSN ID</div>
+                    <div class="fw-semibold">
+                        @(string.IsNullOrWhiteSpace(Model.MRSNID) ? "—" : Model.MRSNID)
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="text-muted small mb-1">DNA Sample ID</div>
+                    <div class="fw-semibold">
+                        @(string.IsNullOrWhiteSpace(Model.DNASampleID) ? "—" : Model.DNASampleID)
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="text-muted small mb-1">Sequencing Date</div>
+                    <div class="fw-semibold">
+                        @(Model.SequencingDate?.ToString("dd MMM yyyy") ?? "—")
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="text-muted small mb-1">Strain Type</div>
+                    <div class="fw-semibold">
+                        @(string.IsNullOrWhiteSpace(Model.StrainType) ? "—" : Model.StrainType)
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="text-muted small mb-1">Serotype</div>
+                    <div class="fw-semibold">
+                        @(string.IsNullOrWhiteSpace(Model.Serotype) ? "—" : Model.Serotype)
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="text-muted small mb-1">Genome Length</div>
+                    <div class="fw-semibold">
+                        @(Model.GenomeLength?.ToString("N0") ?? "—")
+                        @if (Model.GenomeLength.HasValue)
+                        {
+                            <span class="text-muted fw-normal">bp</span>
+                        }
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="text-muted small mb-1">Number of Contigs</div>
+                    <div class="fw-semibold">
+                        @(Model.NoOfContigs?.ToString("N0") ?? "—")
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-4">
+                    <div class="text-muted small mb-1">Recorded Gene Results</div>
+                    <div class="fw-semibold">
+                        @(Model.GeneValues?.Values.Count(v => v.HasValue) ?? 0)
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation form -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+            <h5 class="fw-semibold mb-2">Are you sure?</h5>
+            <p class="text-muted">
+                Confirming will submit a deletion request for the genomics record
+                identified above. The associated Worksheet isolate is not intended
+                to be deleted by this action.
+            </p>
+
+            <form asp-action="Delete"
+                  asp-route-isolateId="@Model.IsolateID"
+                  method="post">
+
+                @Html.AntiForgeryToken()
+
+                <input type="hidden" asp-for="IsolateID" />
+
+                <div class="d-flex flex-wrap justify-content-end gap-2">
+                    <a asp-action="Details"
+                       asp-route-isolateId="@Model.IsolateID"
+                       class="btn btn-outline-secondary">
+                        Cancel
+                    </a>
+
+                    <button type="submit"
+                            class="btn btn-danger"
+                            onclick="return confirm('Are you sure you want to delete the genomics record for isolate @Model.IsolateID?');">
+                        <i class="bi bi-trash me-1"></i>
+                        Confirm Delete
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>

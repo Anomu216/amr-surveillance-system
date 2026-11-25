@@ -1,0 +1,254 @@
+﻿@model AMRSurveillance.ViewModels.WorksheetImportResult?
+
+@{
+    ViewData["Title"] = "Import Worksheets";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">Import Worksheets</h2>
+        <p class="text-muted mb-0">
+            Import laboratory isolate and antimicrobial susceptibility records from Excel.
+        </p>
+    </div>
+
+    <div class="d-flex gap-2">
+        <a asp-controller="Worksheet"
+           asp-action="Template"
+           class="btn btn-outline-secondary">
+            <i class="bi bi-file-earmark-excel"></i>
+            Download Template
+        </a>
+
+        <a asp-controller="Worksheet"
+           asp-action="Index"
+           class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left"></i>
+            Back to Worksheets
+        </a>
+    </div>
+</div>
+
+
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger">
+        <div class="fw-semibold mb-2">
+            Please correct the following:
+        </div>
+
+        <div asp-validation-summary="All"></div>
+    </div>
+}
+
+
+<div class="card shadow-sm mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="bi bi-upload me-2"></i>
+            Upload Excel File
+        </h5>
+    </div>
+
+    <div class="card-body">
+
+        <form asp-controller="Worksheet"
+              asp-action="Import"
+              method="post"
+              enctype="multipart/form-data">
+
+            @Html.AntiForgeryToken()
+
+            <div class="mb-3">
+                <label for="file"
+                       class="form-label fw-semibold">
+                    Excel File
+                </label>
+
+                <input type="file"
+                       id="file"
+                       name="file"
+                       class="form-control"
+                       accept=".xlsx"
+                       required />
+
+                <div class="form-text">
+                    Upload an Excel workbook in <strong>.xlsx</strong> format.
+                    Use the current Worksheet import template to ensure the
+                    column structure is correct.
+                </div>
+            </div>
+
+
+            <div class="d-flex gap-2">
+
+                <button type="submit"
+                        class="btn btn-primary">
+                    <i class="bi bi-upload me-1"></i>
+                    Import Worksheets
+                </button>
+
+                <a asp-controller="Worksheet"
+                   asp-action="Index"
+                   class="btn btn-outline-secondary">
+                    Cancel
+                </a>
+
+            </div>
+
+        </form>
+
+    </div>
+</div>
+
+
+@if (Model != null)
+{
+    <div class="card shadow-sm">
+
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="bi bi-clipboard-data me-2"></i>
+                Import Results
+            </h5>
+        </div>
+
+        <div class="card-body">
+
+            @if (!string.IsNullOrWhiteSpace(
+                    ViewBag.FileName as string))
+            {
+                <p class="mb-3">
+                    <strong>File:</strong>
+                    @ViewBag.FileName
+                </p>
+            }
+
+
+            <div class="row g-3 mb-4">
+
+                <div class="col-md-4">
+                    <div class="border rounded p-3">
+                        <div class="text-muted small">
+                            Total Rows
+                        </div>
+
+                        <div class="fs-4 fw-semibold">
+                            @Model.TotalRows
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="col-md-4">
+                    <div class="border rounded p-3">
+                        <div class="text-muted small">
+                            Successfully Imported
+                        </div>
+
+                        <div class="fs-4 fw-semibold text-success">
+                            @Model.SuccessfulRows
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="col-md-4">
+                    <div class="border rounded p-3">
+                        <div class="text-muted small">
+                            Failed Rows
+                        </div>
+
+                        <div class="fs-4 fw-semibold text-danger">
+                            @Model.FailedRows
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+
+            @if (Model.FailedRows == 0 &&
+                    Model.TotalRows > 0)
+            {
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle me-2"></i>
+
+                    All worksheet rows were imported successfully.
+                </div>
+            }
+
+
+            @if (Model.FailedRows > 0)
+            {
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+
+                    Some rows could not be imported.
+                    Review the errors below.
+                </div>
+
+
+                <div class="table-responsive">
+
+                    <table class="table table-bordered table-hover align-middle">
+
+                        <thead class="table-light">
+
+                            <tr>
+                                <th style="width: 100px;">
+                                    Row
+                                </th>
+
+                                <th style="width: 220px;">
+                                    Isolate ID
+                                </th>
+
+                                <th>
+                                    Error
+                                </th>
+                            </tr>
+
+                        </thead>
+
+                        <tbody>
+
+                            @foreach (var error in Model.Errors)
+                            {
+                                <tr>
+
+                                    <td>
+                                        @error.RowNumber
+                                    </td>
+
+                                    <td>
+                                        @if (string.IsNullOrWhiteSpace(
+                                                                    error.IsolateID))
+                                        {
+                                            <span class="text-muted">
+                                                —
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            @error.IsolateID
+                                        }
+                                    </td>
+
+                                    <td class="text-danger">
+                                        @error.ErrorMessage
+                                    </td>
+
+                                </tr>
+                            }
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+            }
+
+        </div>
+    </div>
+}

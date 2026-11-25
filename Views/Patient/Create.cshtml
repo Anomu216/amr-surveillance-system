@@ -1,0 +1,684 @@
+﻿@model AMRSurveillance.ViewModels.PatientViewModel
+
+@{
+    ViewData["Title"] = "Participant Entry Form";
+
+    ViewData["PageTitle"] = "Participant Entry Form";
+
+    ViewData["PageSubtitle"] =
+        "Register patient demographic and clinical information.";
+}
+
+<style>
+
+    /*
+         * PATIENT SEARCH
+         * Keep the suggestions above all content below the search card.
+         */
+
+    .patient-search-card {
+        position: relative;
+        z-index: 1000;
+        overflow: visible !important;
+    }
+
+        .patient-search-card .card-body,
+        .patient-search-card .row,
+        .patient-search-wrapper {
+            overflow: visible !important;
+        }
+
+    .patient-search-wrapper {
+        position: relative;
+    }
+
+    #patientSuggestions {
+        position: absolute;
+        top: calc(100% + 2px);
+        left: 0;
+        width: 100%;
+        z-index: 9999 !important;
+        max-height: 250px;
+        overflow-y: auto;
+        background-color: #ffffff;
+    }
+
+</style>
+
+
+<!-- ========================================= -->
+<!-- PAGE HEADER -->
+<!-- ========================================= -->
+
+<div class="position-relative mb-4">
+
+    <partial name="_PageHeader" />
+
+    <div class="position-absolute top-0 end-0">
+
+        <a asp-controller="Patient"
+           asp-action="Import"
+           class="btn btn-outline-primary">
+
+            <i class="bi bi-file-earmark-arrow-up me-1"></i>
+            Import Patients
+
+        </a>
+
+    </div>
+
+</div>
+
+
+<!-- ========================================= -->
+<!-- FIND EXISTING PATIENT -->
+<!-- ========================================= -->
+
+<div class="card shadow-sm border-0 mb-4 patient-search-card">
+
+    <div class="card-body">
+
+        <div class="row align-items-end">
+
+            <div class="col-md-8 col-lg-6">
+
+                <label for="patientSearchInput"
+                       class="form-label fw-semibold">
+
+                    Find Existing Patient
+
+                </label>
+
+                <!-- Search wrapper anchors the suggestions dropdown -->
+                <div class="patient-search-wrapper">
+
+                    <input type="text"
+                           id="patientSearchInput"
+                           class="form-control"
+                           placeholder="Enter or search Patient ID"
+                           autocomplete="off"
+                           spellcheck="false" />
+
+                    <!-- ========================================= -->
+                    <!-- PATIENT ID SUGGESTIONS -->
+                    <!-- ========================================= -->
+
+                    <div id="patientSuggestions"
+                         class="list-group shadow-sm d-none">
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="col-md-auto mt-3 mt-md-0">
+
+                <button type="button"
+                        id="btnSearchPatient"
+                        class="btn btn-outline-secondary">
+
+                    <i class="bi bi-search me-1"></i>
+                    Search
+
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <!-- ========================================= -->
+        <!-- SEARCH STATUS / RESULT -->
+        <!-- ========================================= -->
+
+        <div id="patientSearchResult"
+             class="mt-3 d-none">
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ========================================= -->
+<!-- SUCCESS MESSAGE -->
+<!-- ========================================= -->
+@if (TempData["SuccessMessage"] is string successMessage)
+{
+    <div class="alert alert-success alert-dismissible fade show"
+         role="alert">
+
+        <i class="bi bi-check-circle-fill me-2"></i>
+
+        @successMessage
+
+        <button type="button"
+                class="btn-close"
+                data-bs-dismiss="alert"
+                aria-label="Close">
+        </button>
+
+    </div>
+}
+
+
+<!-- ========================================= -->
+<!-- NEW PATIENT REGISTRATION -->
+<!-- ========================================= -->
+
+<form asp-action="Create"
+      method="post"
+      id="patientForm">
+
+    <div asp-validation-summary="ModelOnly"
+         class="text-danger mb-3">
+    </div>
+
+
+    <div class="row">
+
+        <!-- ========================================= -->
+        <!-- LEFT NAVIGATION -->
+        <!-- ========================================= -->
+
+        <div class="col-lg-3 mb-4 mb-lg-0">
+
+            <partial name="_PatientNavigation" />
+
+        </div>
+
+
+        <!-- ========================================= -->
+        <!-- QUESTIONNAIRE -->
+        <!-- ========================================= -->
+
+        <div class="col-lg-9">
+
+            <!-- Patient & Sample Information -->
+
+            <div id="sample"
+                 class="question-section active">
+
+                <partial name="Sections/_SampleInformation" />
+
+            </div>
+
+
+            <!-- Demographics -->
+
+            <div id="demographics"
+                 class="question-section d-none">
+
+                <partial name="Sections/_Demographics" />
+
+            </div>
+
+
+            <!-- Risk Factors -->
+
+            <div id="risk"
+                 class="question-section d-none">
+
+                <partial name="Sections/_RiskFactors" />
+
+            </div>
+
+
+            <!-- Clinical Presentation -->
+
+            <div id="clinical"
+                 class="question-section d-none">
+
+                <partial name="Sections/_ClinicalPresentation" />
+
+            </div>
+
+
+            <!-- Clinical Assessment -->
+
+            <div id="assessment"
+                 class="question-section d-none">
+
+                <partial name="Sections/_ClinicalAssessment" />
+
+            </div>
+
+
+            <!-- Antibiotic History -->
+
+            <div id="antibiotics"
+                 class="question-section d-none">
+
+                <partial name="Sections/_AntibioticsHistory" />
+
+            </div>
+
+
+            <!-- Consent -->
+
+            <div id="consent"
+                 class="question-section d-none">
+
+                <partial name="Sections/_Consent" />
+
+            </div>
+
+
+            <!-- ========================================= -->
+            <!-- QUESTIONNAIRE NAVIGATION BUTTONS -->
+            <!-- ========================================= -->
+
+            <div class="card mt-4">
+
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-between">
+
+                        <button type="button"
+                                id="btnPrevious"
+                                class="btn btn-outline-secondary">
+
+                            <i class="bi bi-chevron-left me-1"></i>
+                            Previous
+
+                        </button>
+
+
+                        <button type="submit"
+                                id="btnSave"
+                                class="btn btn-success">
+
+                            <i class="bi bi-floppy me-1"></i>
+                            Save Patient
+
+                        </button>
+
+
+                        <button type="button"
+                                id="btnNext"
+                                class="btn btn-primary">
+
+                            Next
+                            <i class="bi bi-chevron-right ms-1"></i>
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</form>
+
+
+@section Scripts
+{
+    <partial name="_ValidationScriptsPartial" />
+
+
+    <!-- ========================================= -->
+    <!-- PATIENT QUESTIONNAIRE SCRIPT -->
+    <!-- ========================================= -->
+
+    <script src="~/js/patient.js"
+            asp-append-version="true"></script>
+
+
+    <!-- ========================================= -->
+    <!-- PATIENT SEARCH SCRIPT -->
+    <!-- ========================================= -->
+
+    <script>
+
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const searchInput =
+                document.getElementById("patientSearchInput");
+
+            const searchButton =
+                document.getElementById("btnSearchPatient");
+
+            const suggestionsContainer =
+                document.getElementById("patientSuggestions");
+
+            const resultContainer =
+                document.getElementById("patientSearchResult");
+
+
+            // =========================================
+            // CLEAR SEARCH RESULT
+            // =========================================
+
+            function clearSearchResult() {
+
+                resultContainer.innerHTML = "";
+
+                resultContainer.classList.add("d-none");
+
+            }
+
+
+            // =========================================
+            // HIDE SUGGESTIONS
+            // =========================================
+
+            function hideSuggestions() {
+
+                suggestionsContainer.innerHTML = "";
+
+                suggestionsContainer.classList.add("d-none");
+
+            }
+
+
+            // =========================================
+            // OPEN PATIENT RECORD
+            // =========================================
+
+            function openPatient(patientId) {
+
+                if (!patientId) {
+                    return;
+                }
+
+                const encodedPatientId =
+                    encodeURIComponent(patientId);
+
+                // Use a query parameter because Patient IDs
+                // can contain forward slashes, e.g. AMR/NRH/999.
+                window.location.href =
+                    `/Patient/Edit?patientId=${encodedPatientId}`;
+
+            }
+
+
+            // =========================================
+            // SEARCH FOR EXACT PATIENT
+            // =========================================
+
+            async function searchPatient() {
+
+                const patientId =
+                    searchInput.value
+                        .trim()
+                        .toUpperCase();
+
+                clearSearchResult();
+
+                hideSuggestions();
+
+
+                if (!patientId) {
+
+                    resultContainer.innerHTML = `
+                        <div class="alert alert-warning mb-0">
+                            Please enter a Patient ID to search.
+                        </div>
+                    `;
+
+                    resultContainer.classList.remove("d-none");
+
+                    return;
+
+                }
+
+
+                try {
+
+                    const response =
+                        await fetch(
+                            `/Patient/Search?patientId=${encodeURIComponent(patientId)}`
+                        );
+
+
+                    if (!response.ok) {
+
+                        throw new Error(
+                            "Unable to search for the patient."
+                        );
+
+                    }
+
+
+                    const result =
+                        await response.json();
+
+
+                    if (!result.exists) {
+
+                        resultContainer.innerHTML = `
+                            <div class="alert alert-light border mb-0">
+
+                                <i class="bi bi-info-circle me-2"></i>
+
+                                No matching patient record was found.
+
+                            </div>
+                        `;
+
+                        resultContainer.classList.remove("d-none");
+
+                        return;
+
+                    }
+
+
+                    // Patient exists.
+                    // Do not display any patient information.
+                    // Open the existing record for editing.
+
+                    openPatient(result.patientId);
+
+                }
+                catch (error) {
+
+                    resultContainer.innerHTML = `
+                        <div class="alert alert-danger mb-0">
+
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+
+                            Unable to complete the patient search.
+
+                        </div>
+                    `;
+
+                    resultContainer.classList.remove("d-none");
+
+                }
+
+            }
+
+
+            // =========================================
+            // LOAD PATIENT ID SUGGESTIONS
+            // =========================================
+
+            async function loadSuggestions() {
+
+                const query =
+                    searchInput.value
+                        .trim()
+                        .toUpperCase();
+
+
+                clearSearchResult();
+
+                hideSuggestions();
+
+
+                // Avoid searching for very short input.
+
+                if (query.length < 2) {
+                    return;
+                }
+
+
+                try {
+
+                    const response =
+                        await fetch(
+                            `/Patient/Suggestions?query=${encodeURIComponent(query)}`
+                        );
+
+
+                    if (!response.ok) {
+                        return;
+                    }
+
+
+                    const patients =
+                        await response.json();
+
+
+                    if (!patients ||
+                        patients.length === 0) {
+
+                        return;
+
+                    }
+
+
+                    suggestionsContainer.innerHTML = "";
+
+
+                    patients.forEach(function (patientId) {
+
+                        const suggestion =
+                            document.createElement("button");
+
+
+                        suggestion.type = "button";
+
+                        suggestion.className =
+                            "list-group-item " +
+                            "list-group-item-action";
+
+
+                        // Use textContent rather than innerHTML
+                        // because Patient IDs are plain text.
+                        suggestion.textContent =
+                            patientId;
+
+
+                        suggestion.addEventListener(
+                            "click",
+                            function () {
+
+                                searchInput.value =
+                                    patientId;
+
+                                hideSuggestions();
+
+                                // Open the selected record directly.
+                                openPatient(patientId);
+
+                            }
+                        );
+
+
+                        suggestionsContainer.appendChild(
+                            suggestion
+                        );
+
+                    });
+
+
+                    suggestionsContainer.classList.remove(
+                        "d-none"
+                    );
+
+                }
+                catch {
+
+                    // Suggestions should fail silently so that
+                    // normal patient registration is unaffected.
+
+                    hideSuggestions();
+
+                }
+
+            }
+
+
+            // =========================================
+            // SEARCH BUTTON
+            // =========================================
+
+            searchButton.addEventListener(
+                "click",
+                searchPatient
+            );
+
+
+            // =========================================
+            // ENTER KEY
+            // =========================================
+
+            searchInput.addEventListener(
+                "keydown",
+                function (event) {
+
+                    if (event.key === "Enter") {
+
+                        event.preventDefault();
+
+                        searchPatient();
+
+                    }
+
+                }
+            );
+
+
+            // =========================================
+            // INPUT / AUTOCOMPLETE SUGGESTIONS
+            // =========================================
+
+            let searchTimeout;
+
+
+            searchInput.addEventListener(
+                "input",
+                function () {
+
+                    clearTimeout(searchTimeout);
+
+
+                    searchTimeout =
+                        setTimeout(
+                            loadSuggestions,
+                            250
+                        );
+
+                }
+            );
+
+
+            // =========================================
+            // HIDE SUGGESTIONS WHEN CLICKING AWAY
+            // =========================================
+
+            document.addEventListener(
+                "click",
+                function (event) {
+
+                    if (!searchInput.contains(event.target) &&
+                        !suggestionsContainer.contains(event.target)) {
+
+                        hideSuggestions();
+
+                    }
+
+                }
+            );
+
+        });
+
+    </script>
+}

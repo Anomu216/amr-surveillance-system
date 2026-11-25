@@ -1,0 +1,169 @@
+﻿@model AMRSurveillance.Models.GeneReference
+
+@{
+    ViewData["Title"] = "Delete Gene Reference";
+
+    bool hasRecordedValues = ViewBag.HasEnteredValues == true;
+}
+
+<div class="container mt-4">
+
+    <h4>Delete Gene Reference</h4>
+
+    <div class="card shadow-sm">
+
+        <div class="card-body">
+
+            <h5>@Model.GeneName</h5>
+
+            <p>
+                <strong>Description:</strong>
+                @Model.GeneDescription
+            </p>
+
+            @if (hasRecordedValues)
+            {
+                <div class="alert alert-danger">
+                    <h5>
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        Warning: Recorded Genomics Data
+                    </h5>
+
+                    <p>
+                        This gene has recorded values in the Genomics table.
+                    </p>
+
+                    <p>
+                        Deleting this gene would also delete its
+                        corresponding Genomics column and permanently
+                        remove the recorded values.
+                    </p>
+
+                    <strong>
+                        Deletion is not permitted while recorded values exist.
+                    </strong>
+                </div>
+
+                <a asp-action="Index"
+                   class="btn btn-secondary">
+                    Back to Gene References
+                </a>
+            }
+            else
+            {
+                <div class="alert alert-warning">
+                    <strong>No recorded values found.</strong>
+
+                    <p class="mb-0">
+                        Deleting this gene will also remove its corresponding
+                        column from the Genomics table.
+                    </p>
+                </div>
+
+                <button type="button"
+                        class="btn btn-danger"
+                        data-bs-toggle="modal"
+                        data-bs-target="#confirmDeleteModal">
+
+                    <i class="bi bi-trash"></i>
+                    Delete Gene
+                </button>
+
+                <a asp-action="Index"
+                   class="btn btn-secondary">
+                    Cancel
+                </a>
+            }
+
+        </div>
+    </div>
+</div>
+
+@if (!hasRecordedValues)
+{
+    <div class="modal fade"
+         id="confirmDeleteModal"
+         tabindex="-1"
+         aria-labelledby="confirmDeleteModalLabel"
+         aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered">
+
+            <div class="modal-content">
+
+                <div class="modal-header bg-danger text-white">
+
+                    <h5 class="modal-title"
+                        id="confirmDeleteModalLabel">
+
+                        Confirm Gene Deletion
+
+                    </h5>
+
+                    <button type="button"
+                            class="btn-close btn-close-white"
+                            data-bs-dismiss="modal"
+                            aria-label="Close">
+                    </button>
+
+                </div>
+
+                <div class="modal-body">
+
+                    <p>
+                        Are you sure you want to delete
+                        <strong>@Model.GeneName</strong>?
+                    </p>
+
+                    <p>
+                        This will permanently delete:
+                    </p>
+
+                    <ul>
+                        <li>The Gene Reference record</li>
+                        <li>The corresponding column in the Genomics table</li>
+                    </ul>
+
+                    <p class="text-danger fw-bold">
+                        This action cannot be undone.
+                    </p>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+
+                        Cancel
+
+                    </button>
+
+                    <form asp-action="Delete"
+                          asp-controller="GeneReference"
+                          method="post">
+
+                        @Html.AntiForgeryToken()
+
+                        <input type="hidden"
+                               name="id"
+                               value="@Model.GeneName" />
+
+                        <button type="submit"
+                                class="btn btn-danger">
+
+                            Yes, Delete Gene
+
+                        </button>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+}

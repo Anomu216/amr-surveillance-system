@@ -1,0 +1,234 @@
+﻿@model AMRSurveillance.ViewModels.PatientViewModel
+
+<div class="card section-card">
+
+    <!-- ========================================= -->
+    <!-- SECTION HEADER -->
+    <!-- ========================================= -->
+
+    <div class="card-header d-flex align-items-center">
+
+        <i class="bi bi-person-vcard-fill text-primary me-2 fs-4"></i>
+
+        <div>
+
+            <h5 class="mb-0">
+                Patient &amp; Sample Information
+            </h5>
+
+            <small class="text-muted">
+                Enter patient identification and specimen collection details.
+            </small>
+
+        </div>
+
+    </div>
+
+
+    <!-- ========================================= -->
+    <!-- SECTION BODY -->
+    <!-- ========================================= -->
+
+    <div class="card-body">
+
+        <div class="row g-4">
+
+
+            <!-- ========================================= -->
+            <!-- PATIENT ID -->
+            <!-- ========================================= -->
+
+            <div class="col-md-6">
+
+                <label asp-for="PatientID"
+                       class="form-label fw-semibold">
+
+                    Patient ID
+                    <span class="text-danger">*</span>
+
+                </label>
+
+                <input asp-for="PatientID"
+                       class="form-control"
+                       placeholder="e.g. ISO/BSA/001"
+                       autocomplete="off"
+                       spellcheck="false"
+                       maxlength="13" />
+
+                <!-- Client-side JavaScript validation -->
+                <div class="invalid-feedback"></div>
+
+                <!-- Server-side validation -->
+                <span asp-validation-for="PatientID"
+                      class="text-danger small"></span>
+
+            </div>
+
+
+            <!-- ========================================= -->
+            <!-- PRESUMPTIVE ID: ISO ONLY -->
+            <!-- ========================================= -->
+
+            <div class="col-md-6 d-none"
+                 id="presumptiveIdContainer">
+
+                <label asp-for="PresumptiveID"
+                       class="form-label fw-semibold">
+
+                    Presumptive ID
+                    <span class="text-danger">*</span>
+
+                </label>
+
+                <input asp-for="PresumptiveID"
+                       class="form-control"
+                       placeholder="Enter presumptive ID"
+                       autocomplete="off"
+                       spellcheck="false" />
+
+                <div class="invalid-feedback"></div>
+
+                <div class="form-text">
+                    Required for ISO cases.
+                </div>
+
+                <span asp-validation-for="PresumptiveID"
+                      class="text-danger small"></span>
+
+            </div>
+
+
+            <!-- ========================================= -->
+            <!-- ACCEPT / REJECT -->
+            <!-- ========================================= -->
+
+            <div class="col-md-6">
+
+                <label asp-for="AcceptReject"
+                       class="form-label fw-semibold">
+
+                    Accept / Reject
+                    <span class="text-danger">*</span>
+
+                </label>
+
+                <select asp-for="AcceptReject"
+                        asp-items="Model.AcceptRejectList"
+                        class="form-select">
+
+                </select>
+
+                <div class="invalid-feedback"></div>
+
+                <span asp-validation-for="AcceptReject"
+                      class="text-danger small"></span>
+
+            </div>
+
+
+            <!-- ========================================= -->
+            <!-- FACILITY -->
+            <!-- ========================================= -->
+
+            <div class="col-md-6">
+
+                <label asp-for="FacilityID"
+                       class="form-label fw-semibold">
+
+                    Facility
+                    <span class="text-danger">*</span>
+
+                </label>
+
+                <select asp-for="FacilityID"
+                        asp-items="Model.FacilityList"
+                        class="form-select">
+
+                    <option value="">
+                        -- Select Facility --
+                    </option>
+
+                </select>
+
+                <div class="invalid-feedback"></div>
+
+                <span asp-validation-for="FacilityID"
+                      class="text-danger small"></span>
+
+            </div>
+
+
+            <!-- ========================================= -->
+            <!-- ENROLLMENT DATE -->
+            <!-- ========================================= -->
+
+            <div class="col-md-6">
+
+                <label asp-for="EnrollmentDate"
+                       class="form-label fw-semibold">
+
+                    Enrollment Date
+                    <span class="text-danger">*</span>
+
+                </label>
+
+                <input asp-for="EnrollmentDate"
+                       type="date"
+                       class="form-control"
+                       max="@DateTime.Today.ToString("yyyy-MM-dd")"
+                       autocomplete="off" />
+
+                <div class="invalid-feedback"></div>
+
+                <div class="form-text">
+
+                    Date the participant was enrolled into
+                    the surveillance study.
+
+                </div>
+
+                <span asp-validation-for="EnrollmentDate"
+                      class="text-danger small"></span>
+
+            </div>
+
+
+            <!-- ========================================= -->
+            <!-- LABORATORY RECEIVING DATE -->
+            <!-- ========================================= -->
+
+            <div class="col-md-6">
+
+                <label asp-for="ReceivingDate"
+                       class="form-label fw-semibold">
+
+                    Laboratory Receiving Date
+                    <span class="text-danger">*</span>
+
+                </label>
+
+                <input asp-for="ReceivingDate"
+                       type="date"
+                       class="form-control"
+                       max="@DateTime.Today.ToString("yyyy-MM-dd")"
+                       autocomplete="off" />
+
+                <div class="invalid-feedback"></div>
+
+                <div class="form-text">
+
+                    Date the specimen was received by
+                    the laboratory.
+
+                </div>
+
+                <span asp-validation-for="ReceivingDate"
+                      class="text-danger small"></span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

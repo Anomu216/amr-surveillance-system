@@ -1,0 +1,96 @@
+﻿@model AMRSurveillance.ViewModels.GeneReferenceViewModel
+
+@{
+    ViewData["Title"] = "Register Gene";
+}
+
+<div class="container py-4">
+    <div class="mb-4">
+        <h2>Register Gene Reference</h2>
+        <p class="text-muted">
+            Add a gene to the reference registry for genomic surveillance.
+        </p>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-white">
+            <strong>Gene Information</strong>
+        </div>
+        <div class="card-body">
+            <form asp-action="Create" method="post">
+                @Html.AntiForgeryToken()
+
+                <div asp-validation-summary="ModelOnly"
+                     class="text-danger mb-3"></div>
+
+                <div class="mb-3">
+                    <label asp-for="GeneName" class="form-label">
+                        Gene Name <span class="text-danger">*</span>
+                    </label>
+                    <input asp-for="GeneName" class="form-control"
+                           placeholder="e.g. blaNDM-1" />
+                    <span asp-validation-for="GeneName"
+                          class="text-danger"></span>
+                    <div class="form-text">
+                        This name identifies the gene and its corresponding
+                        column in the Genomics table.
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="GeneDescription" class="form-label">
+                        Description
+                    </label>
+                    <textarea asp-for="GeneDescription"
+                              class="form-control" rows="3"
+                              placeholder="Brief description of the gene"></textarea>
+                    <span asp-validation-for="GeneDescription"
+                          class="text-danger"></span>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="GeneCategory" class="form-label">
+                            Gene Category
+                        </label>
+                        <input asp-for="GeneCategory" class="form-control"
+                               placeholder="e.g. Carbapenem resistance" />
+                        <span asp-validation-for="GeneCategory"
+                              class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="ApplicableOrganism" class="form-label">
+                            Applicable Organism
+                        </label>
+                        <input asp-for="ApplicableOrganism"
+                               class="form-control"
+                               placeholder="e.g. Escherichia coli" />
+                        <span asp-validation-for="ApplicableOrganism"
+                              class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="form-check mb-4">
+                    <input asp-for="IsActive" class="form-check-input" />
+                    <label asp-for="IsActive" class="form-check-label">
+                        Active gene
+                    </label>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save"></i> Register Gene
+                    </button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

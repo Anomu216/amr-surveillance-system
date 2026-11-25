@@ -1,0 +1,65 @@
+﻿@model AMRSurveillance.ViewModels.FacilityViewModel
+
+@{
+    ViewData["Title"] = "Edit Facility";
+}
+
+<div class="container mt-4">
+
+    <div class="card shadow">
+
+        <div class="card-header bg-warning">
+
+            <h4 class="mb-0">
+
+                Edit Facility
+
+            </h4>
+
+        </div>
+
+        <div class="card-body">
+
+            <form asp-action="Edit"
+                  method="post">
+
+                <div asp-validation-summary="ModelOnly"
+                     class="text-danger mb-3">
+                </div>
+
+                <partial name="_FacilityForm"
+                         model="Model" />
+
+                <hr />
+
+                <div class="text-end">
+
+                    <button class="btn btn-warning">
+
+                        Update Facility
+
+                    </button>
+
+                    <a asp-action="Index"
+                       class="btn btn-secondary">
+
+                        Cancel
+
+                    </a>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+@section Scripts
+{
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

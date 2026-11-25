@@ -1,0 +1,56 @@
+﻿@model AMRSurveillance.ViewModels.ShipmentViewModel
+
+@{
+    ViewData["Title"] = "Delete Shipment";
+}
+
+<h2 class="mb-4">Delete Shipment</h2>
+
+<div class="alert alert-warning">
+    <strong>Are you sure?</strong>
+    This will permanently delete the shipment record.
+    If a genomics record references this shipment, the database may prevent deletion.
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-4">KENID</dt>
+            <dd class="col-sm-8">@Model.KENID</dd>
+
+            <dt class="col-sm-4">Isolate ID</dt>
+            <dd class="col-sm-8">@Model.IsolateID</dd>
+
+            <dt class="col-sm-4">MALDI ID</dt>
+            <dd class="col-sm-8">@(Model.MALDIID ?? "—")</dd>
+
+            <dt class="col-sm-4">MRSN ID</dt>
+            <dd class="col-sm-8">@(Model.MRSNID ?? "—")</dd>
+
+            <dt class="col-sm-4">Shipment Date</dt>
+            <dd class="col-sm-8">
+                @(Model.ShipmentDate?.ToString("yyyy-MM-dd") ?? "—")
+            </dd>
+
+            <dt class="col-sm-4">Shipment Number</dt>
+            <dd class="col-sm-8">@(Model.ShipmentNumber ?? "—")</dd>
+
+            <dt class="col-sm-4">Box Number</dt>
+            <dd class="col-sm-8">@(Model.BoxNumber ?? "—")</dd>
+        </dl>
+    </div>
+</div>
+
+<form asp-action="DeleteConfirmed"
+      asp-route-kenID="@Model.KENID"
+      method="post">
+    @Html.AntiForgeryToken()
+
+    <button type="submit" class="btn btn-danger">
+        Confirm Delete
+    </button>
+
+    <a asp-action="Index" class="btn btn-outline-secondary ms-2">
+        Cancel
+    </a>
+</form>

@@ -1,0 +1,80 @@
+﻿@model AMRSurveillance.ViewModels.ShipmentViewModel
+
+@{
+    ViewData["Title"] = "Add Shipment";
+}
+
+<h2 class="mb-4">Add Shipment</h2>
+
+<div class="row">
+    <div class="col-md-8 col-lg-7">
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+
+            <div asp-validation-summary="ModelOnly"
+                 class="text-danger mb-3"></div>
+
+            <div class="mb-3">
+                <label asp-for="KENID" class="form-label">KENID *</label>
+                <input asp-for="KENID" class="form-control" />
+                <span asp-validation-for="KENID" class="text-danger"></span>
+                <div class="form-text">
+                    Unique identifier for this shipment.
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="IsolateID" class="form-label">Isolate ID *</label>
+                <input asp-for="IsolateID" class="form-control" />
+                <span asp-validation-for="IsolateID" class="text-danger"></span>
+                <div class="form-text">
+                    Must match an existing isolate in Worksheets.
+                    Multiple shipments may reference the same isolate.
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="MALDIID" class="form-label">MALDI ID</label>
+                <input asp-for="MALDIID" class="form-control" />
+                <span asp-validation-for="MALDIID" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="MRSNID" class="form-label">MRSN ID</label>
+                <input asp-for="MRSNID" class="form-control" />
+                <span asp-validation-for="MRSNID" class="text-danger"></span>
+                <div class="form-text">
+                    Optional. Must be unique when provided; you can add it later.
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="ShipmentDate" class="form-label">Shipment Date</label>
+                <input asp-for="ShipmentDate"
+                       type="date"
+                       asp-format="{0:yyyy-MM-dd}"
+                       class="form-control" />
+                <span asp-validation-for="ShipmentDate" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="ShipmentNumber" class="form-label">Shipment Number</label>
+                <input asp-for="ShipmentNumber" class="form-control" />
+                <span asp-validation-for="ShipmentNumber" class="text-danger"></span>
+            </div>
+
+            <div class="mb-4">
+                <label asp-for="BoxNumber" class="form-label">Box Number</label>
+                <input asp-for="BoxNumber" class="form-control" />
+                <span asp-validation-for="BoxNumber" class="text-danger"></span>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Save Shipment</button>
+            <a asp-action="Index" class="btn btn-outline-secondary ms-2">Cancel</a>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,198 @@
+﻿@model AMRSurveillance.ViewModels.ManageUsersIndexViewModel
+@{
+    ViewData["Title"] = "Manage Users";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+            <h4 class="mb-0">Manage Users</h4>
+            <small class="text-muted">Reassign roles, activate/deactivate accounts, unlock users, or delete unused accounts</small>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="CreateUser" class="btn btn-primary">
+                <i class="bi bi-person-plus me-1"></i> Create User
+            </a>
+            <a asp-action="ResetPassword" class="btn btn-outline-secondary">
+                <i class="bi bi-key me-1"></i> Reset Password
+            </a>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] is string successMessage)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @successMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] is string errorMessage)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @errorMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-body">
+            <form method="get" asp-action="Index" class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label asp-for="Search" class="form-label small text-muted mb-1">Search User</label>
+                    <input asp-for="Search" class="form-control" placeholder="Name, username, or email..." />
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="RoleFilter" class="form-label small text-muted mb-1">Role</label>
+                    <select asp-for="RoleFilter" asp-items="Model.AvailableRoles" class="form-select">
+                        <option value="">All Roles</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="StatusFilter" class="form-label small text-muted mb-1">Status</label>
+                    <select asp-for="StatusFilter" class="form-select">
+                        <option value="">All Statuses</option>
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                        <option value="Locked">Locked Out</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary w-100">Filter</button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">Reset</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Full Name</th>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Assigned Roles</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Users.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                No user accounts matched the selected filters.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var user in Model.Users)
+                        {
+                            var isSelf = user.Id == Model.CurrentAdminId;
+                            <tr>
+                                <td class="fw-semibold">
+                                    @(string.IsNullOrWhiteSpace(user.FullName) ? "—" : user.FullName)
+                                    @if (isSelf)
+                                    {
+                                        <span class="badge bg-info text-dark ms-1">You</span>
+                                    }
+                                </td>
+                                <td>@user.UserName</td>
+                                <td>@user.Email</td>
+                                <td>
+                                    @if (user.Roles.Count == 0)
+                                    {
+                                        <span class="text-muted small">None</span>
+                                    }
+                                    else
+                                    {
+                                        foreach (var role in user.Roles)
+                                        {
+                                            <span class="badge bg-secondary me-1">@role</span>
+                                        }
+                                    }
+                                </td>
+                                <td>
+                                    @if (user.IsActive)
+                                    {
+                                        <span class="badge bg-success">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">Inactive</span>
+                                    }
+
+                                    @if (user.IsLockedOut)
+                                    {
+                                        <span class="badge bg-warning text-dark ms-1">Locked</span>
+                                    }
+
+                                    @if (user.MustChangePassword)
+                                    {
+                                        <span class="badge bg-light text-dark border ms-1" title="User must change password on next login">Temp Password</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-inline-flex flex-wrap justify-content-end gap-1">
+                                        <a asp-action="EditRoles"
+                                           asp-route-id="@user.Id"
+                                           class="btn btn-sm btn-outline-primary"
+                                           title="Reassign Roles">
+                                            <i class="bi bi-person-gear"></i> Roles
+                                        </a>
+
+                                        @if (!isSelf)
+                                        {
+                                            if (user.IsActive)
+                                            {
+                                                <a asp-action="ResetPassword"
+                                                   asp-route-userId="@user.Id"
+                                                   class="btn btn-sm btn-outline-secondary"
+                                                   title="Reset Password">
+                                                    <i class="bi bi-key"></i>
+                                                </a>
+                                            }
+
+                                            if (user.IsLockedOut)
+                                            {
+                                                <form asp-action="Unlock" method="post" class="d-inline">
+                                                    <input type="hidden" name="id" value="@user.Id" />
+                                                    <button type="submit" class="btn btn-sm btn-outline-warning" title="Unlock Account">
+                                                        <i class="bi bi-unlock"></i>
+                                                    </button>
+                                                </form>
+                                            }
+
+                                            <form asp-action="ToggleActive" method="post" class="d-inline">
+                                                <input type="hidden" name="id" value="@user.Id" />
+                                                <button type="submit"
+                                                        class="btn btn-sm @(user.IsActive ? "btn-outline-warning" : "btn-outline-success")"
+                                                        title="@(user.IsActive ? "Deactivate User" : "Activate User")"
+                                                        onclick="return confirm('@(user.IsActive ? $"Deactivate {user.UserName}? They will be logged out immediately." : $"Activate {user.UserName}?")');">
+                                                    <i class="bi @(user.IsActive ? "bi-person-slash" : "bi-person-check")"></i>
+                                                </button>
+                                            </form>
+
+                                            <form asp-action="Delete" method="post" class="d-inline">
+                                                <input type="hidden" name="id" value="@user.Id" />
+                                                <button type="submit"
+                                                        class="btn btn-sm btn-outline-danger"
+                                                        title="Delete User (only allowed if user has no activity history)"
+                                                        onclick="return confirm('Permanently delete user @user.UserName? If they have any historical activity, deletion will be blocked.');">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

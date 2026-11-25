@@ -1,0 +1,98 @@
+﻿@model AMRSurveillance.ViewModels.GeneReferenceViewModel
+
+@{
+    ViewData["Title"] = "Edit Gene Reference";
+}
+
+<div class="container py-4">
+    <div class="mb-4">
+        <h2>Edit Gene Reference</h2>
+        <p class="text-muted">
+            Update the description, category, organism, or status.
+        </p>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-white">
+            <strong>Gene Information</strong>
+        </div>
+        <div class="card-body">
+            <form asp-action="Edit"
+                  asp-route-id="@Model.GeneName"
+                  method="post">
+                @Html.AntiForgeryToken()
+
+                <div asp-validation-summary="ModelOnly"
+                     class="text-danger mb-3"></div>
+
+                <div class="mb-3">
+                    <label asp-for="GeneName" class="form-label">
+                        Gene Name
+                    </label>
+                    <input asp-for="GeneName" class="form-control" readonly />
+                    <span asp-validation-for="GeneName"
+                          class="text-danger"></span>
+                    <div class="form-text">
+                        The gene name cannot be changed because it identifies
+                        the corresponding Genomics database column.
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="GeneDescription" class="form-label">
+                        Description
+                    </label>
+                    <textarea asp-for="GeneDescription"
+                              class="form-control" rows="3"></textarea>
+                    <span asp-validation-for="GeneDescription"
+                          class="text-danger"></span>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="GeneCategory" class="form-label">
+                            Gene Category
+                        </label>
+                        <input asp-for="GeneCategory" class="form-control" />
+                        <span asp-validation-for="GeneCategory"
+                              class="text-danger"></span>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="ApplicableOrganism" class="form-label">
+                            Applicable Organism
+                        </label>
+                        <input asp-for="ApplicableOrganism"
+                               class="form-control" />
+                        <span asp-validation-for="ApplicableOrganism"
+                              class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="form-check mb-4">
+                    <input asp-for="IsActive" class="form-check-input" />
+                    <label asp-for="IsActive" class="form-check-label">
+                        Active gene
+                    </label>
+                    <div class="form-text">
+                        Deactivating a gene will not delete its database column
+                        or previously recorded results.
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save"></i> Save Changes
+                    </button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

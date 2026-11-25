@@ -1,0 +1,123 @@
+﻿@model AMRSurveillance.ViewModels.AntibioticClassViewModel
+
+@{
+    ViewData["Title"] = "Edit Antibiotic Class";
+}
+
+<div class="container-fluid">
+
+    <!-- ========================================= -->
+    <!-- Page Header -->
+    <!-- ========================================= -->
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+
+            <h2 class="fw-bold mb-1">
+                Edit Antibiotic Class
+            </h2>
+
+            <p class="text-muted mb-0">
+                View or confirm the selected antibiotic class.
+            </p>
+
+        </div>
+
+        <div>
+
+            <a asp-action="Index"
+               class="btn btn-outline-secondary">
+
+                <i class="bi bi-arrow-left"></i>
+
+                Back
+
+            </a>
+
+        </div>
+
+    </div>
+
+    <!-- ========================================= -->
+    <!-- Validation Summary -->
+    <!-- ========================================= -->
+
+    <div asp-validation-summary="ModelOnly"
+         class="alert alert-danger">
+    </div>
+
+    <!-- ========================================= -->
+    <!-- Edit Form -->
+    <!-- ========================================= -->
+
+    <div class="card shadow-sm border-0">
+
+        <div class="card-body">
+
+            <form asp-action="Edit"
+                  asp-route-id="@Model.AntibioticClassName"
+                  method="post">
+
+                @Html.AntiForgeryToken()
+
+                <div class="row">
+
+                    <div class="col-md-8">
+
+                        <div class="mb-3">
+
+                            <label asp-for="AntibioticClassName"
+                                   class="form-label fw-semibold">
+
+                            </label>
+
+                            <input asp-for="AntibioticClassName"
+                                   class="form-control bg-light"
+                                   readonly />
+
+                            <div class="form-text">
+                                Primary key &mdash; cannot be renamed because existing antibiotics reference this class.
+                            </div>
+
+                            <span asp-validation-for="AntibioticClassName"
+                                  class="text-danger">
+
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <hr />
+
+                <button type="submit"
+                        class="btn btn-primary">
+
+                    <i class="bi bi-check-circle"></i>
+
+                    Update
+
+                </button>
+
+                <a asp-action="Index"
+                   class="btn btn-outline-secondary ms-2">
+
+                    Cancel
+
+                </a>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+@section Scripts
+{
+    <partial name="_ValidationScriptsPartial" />
+}

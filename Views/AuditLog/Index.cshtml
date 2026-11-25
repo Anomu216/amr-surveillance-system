@@ -1,0 +1,257 @@
+﻿@model AMRSurveillance.ViewModels.AuditLogIndexViewModel
+@{
+    ViewData["Title"] = "System Audit Logs";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+            <h4 class="mb-0">System Audit Logs</h4>
+            <small class="text-muted">All timestamps recorded in East Africa Time (EAT, UTC+3) &bull; @Model.TotalCount.ToString("N0") matching events</small>
+        </div>
+        <div>
+            <a asp-action="ExportExcel"
+               asp-route-startDate="@Model.StartDate?.ToString("yyyy-MM-dd")"
+               asp-route-endDate="@Model.EndDate?.ToString("yyyy-MM-dd")"
+               asp-route-entityName="@Model.EntityName"
+               asp-route-action="@Model.Action"
+               asp-route-userQuery="@Model.UserQuery"
+               asp-route-entityKeyQuery="@Model.EntityKeyQuery"
+               class="btn btn-outline-success">
+                <i class="bi bi-file-earmark-excel me-1"></i> Export Filtered Logs
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-body">
+            <form method="get" asp-action="Index" class="row g-2 align-items-end">
+                <div class="col-md-2">
+                    <label asp-for="StartDate" class="form-label small text-muted mb-1">From Date (EAT)</label>
+                    <input asp-for="StartDate" type="date" class="form-control" />
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="EndDate" class="form-label small text-muted mb-1">To Date (EAT)</label>
+                    <input asp-for="EndDate" type="date" class="form-control" />
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="EntityName" class="form-label small text-muted mb-1">Entity</label>
+                    <select asp-for="EntityName" asp-items="Model.AvailableEntities" class="form-select">
+                        <option value="">All Entities</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="Action" class="form-label small text-muted mb-1">Action</label>
+                    <select asp-for="Action" asp-items="Model.AvailableActions" class="form-select">
+                        <option value="">All Actions</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="UserQuery" class="form-label small text-muted mb-1">User</label>
+                    <input asp-for="UserQuery" class="form-control" placeholder="Username..." />
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="EntityKeyQuery" class="form-label small text-muted mb-1">Record ID / Keyword</label>
+                    <input asp-for="EntityKeyQuery" class="form-control" placeholder="ID or summary..." />
+                </div>
+                <div class="col-12 d-flex justify-content-end gap-2 mt-2">
+                    <a asp-action="Index" class="btn btn-outline-secondary">Reset</a>
+                    <button type="submit" class="btn btn-primary">Apply Filters</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 175px;">Timestamp (EAT)</th>
+                        <th>User</th>
+                        <th style="width: 130px;">Action</th>
+                        <th>Entity</th>
+                        <th>Record Key</th>
+                        <th>Summary</th>
+                        <th class="text-end" style="width: 110px;">Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Items.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                No audit log entries matched your filter criteria.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var item in Model.Items)
+                        {
+                            var badgeClass = item.Action switch
+                            {
+                                "Create" or "CreateUser" or "ActivateUser" => "bg-success",
+                                "Update" or "RoleChange" or "AdminPasswordReset" or "UnlockUser" => "bg-primary",
+                                "Delete" or "DeleteUser" or "DeactivateUser" => "bg-danger",
+                                "Export" => "bg-info text-dark",
+                                _ => "bg-secondary"
+                            };
+
+                            var hasDiff = !string.IsNullOrWhiteSpace(item.OldValuesJson)
+                            || !string.IsNullOrWhiteSpace(item.NewValuesJson);
+
+                            <tr>
+                                <td class="text-nowrap small">@item.TimestampEat.ToString("dd MMM yyyy HH:mm:ss")</td>
+                                <td>
+                                    <div class="fw-semibold">@(item.UserName ?? "System")</div>
+                                    @if (!string.IsNullOrWhiteSpace(item.IpAddress))
+                                    {
+                                        <small class="text-muted">@item.IpAddress</small>
+                                    }
+                                </td>
+                                <td><span class="badge @badgeClass">@item.Action</span></td>
+                                <td>@item.EntityName</td>
+                                <td class="font-monospace small">@(item.EntityKey ?? "—")</td>
+                                <td>@(item.Summary ?? "—")</td>
+                                <td class="text-end">
+                                    @if (hasDiff)
+                                    {
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-secondary"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#auditDiffModal"
+                                                data-summary="@item.Summary"
+                                                data-timestamp="@item.TimestampEat.ToString("dd MMM yyyy HH:mm:ss") EAT"
+                                                data-user="@(item.UserName ?? "System")"
+                                                data-old="@item.OldValuesJson"
+                                                data-new="@item.NewValuesJson">
+                                            Changes
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">—</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (Model.TotalPages > 1)
+        {
+            <div class="card-footer bg-white d-flex justify-content-between align-items-center">
+                <small class="text-muted">Page @Model.Page of @Model.TotalPages</small>
+                <div class="btn-group">
+                    <a asp-action="Index"
+                       asp-route-page="@(Model.Page - 1)"
+                       asp-route-pageSize="@Model.PageSize"
+                       asp-route-startDate="@Model.StartDate?.ToString("yyyy-MM-dd")"
+                       asp-route-endDate="@Model.EndDate?.ToString("yyyy-MM-dd")"
+                       asp-route-entityName="@Model.EntityName"
+                       asp-route-action="@Model.Action"
+                       asp-route-userQuery="@Model.UserQuery"
+                       asp-route-entityKeyQuery="@Model.EntityKeyQuery"
+                       class="btn btn-sm btn-outline-secondary @(!Model.HasPreviousPage ? "disabled" : "")">
+                        Previous
+                    </a>
+                    <a asp-action="Index"
+                       asp-route-page="@(Model.Page + 1)"
+                       asp-route-pageSize="@Model.PageSize"
+                       asp-route-startDate="@Model.StartDate?.ToString("yyyy-MM-dd")"
+                       asp-route-endDate="@Model.EndDate?.ToString("yyyy-MM-dd")"
+                       asp-route-entityName="@Model.EntityName"
+                       asp-route-action="@Model.Action"
+                       asp-route-userQuery="@Model.UserQuery"
+                       asp-route-entityKeyQuery="@Model.EntityKeyQuery"
+                       class="btn btn-sm btn-outline-secondary @(!Model.HasNextPage ? "disabled" : "")">
+                        Next
+                    </a>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Diff Viewer Modal -->
+<div class="modal fade" id="auditDiffModal" tabindex="-1" aria-labelledby="auditDiffModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title mb-0" id="auditDiffModalLabel">Audit Event Details</h5>
+                    <small class="text-muted" id="auditModalMeta"></small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="fw-semibold mb-3" id="auditModalSummary"></p>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 28%;">Field</th>
+                                <th style="width: 36%;">Previous Value</th>
+                                <th style="width: 36%;">New Value</th>
+                            </tr>
+                        </thead>
+                        <tbody id="auditDiffTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('auditDiffModal')?.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const summary = button.getAttribute('data-summary') || '';
+            const timestamp = button.getAttribute('data-timestamp') || '';
+            const user = button.getAttribute('data-user') || '';
+            const oldRaw = button.getAttribute('data-old');
+            const newRaw = button.getAttribute('data-new');
+
+            document.getElementById('auditModalSummary').textContent = summary;
+            document.getElementById('auditModalMeta').textContent = `${timestamp} • By ${user}`;
+
+            const oldObj = oldRaw ? JSON.parse(oldRaw) : {};
+            const newObj = newRaw ? JSON.parse(newRaw) : {};
+            const allKeys = Array.from(new Set([...Object.keys(oldObj), ...Object.keys(newObj)]));
+
+            const tbody = document.getElementById('auditDiffTableBody');
+            tbody.innerHTML = '';
+
+            if (allKeys.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">No field-level changes recorded.</td></tr>';
+                return;
+            }
+
+            for (const key of allKeys) {
+                const tr = document.createElement('tr');
+
+                const tdKey = document.createElement('td');
+                tdKey.className = 'fw-semibold font-monospace small';
+                tdKey.textContent = key;
+
+                const tdOld = document.createElement('td');
+                tdOld.className = 'small text-danger';
+                tdOld.textContent = key in oldObj && oldObj[key] !== null ? JSON.stringify(oldObj[key]) : '—';
+
+                const tdNew = document.createElement('td');
+                tdNew.className = 'small text-success';
+                tdNew.textContent = key in newObj && newObj[key] !== null ? JSON.stringify(newObj[key]) : '—';
+
+                tr.append(tdKey, tdOld, tdNew);
+                tbody.appendChild(tr);
+            }
+        });
+    </script>
+}

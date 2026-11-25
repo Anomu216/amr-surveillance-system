@@ -1,0 +1,122 @@
+﻿@model AMRSurveillance.ViewModels.OrganismViewModel
+
+@{
+    ViewData["Title"] = "Add Organism";
+}
+
+<div class="container-fluid">
+
+    <!-- =====================================================
+         HEADER
+         ===================================================== -->
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+
+        <div>
+            <h2 class="mb-1">Add Organism</h2>
+
+            <p class="text-muted mb-0">
+                Add a WHONET organism identifier to the reference table.
+            </p>
+        </div>
+
+        <a asp-action="Index"
+           class="btn btn-sm btn-outline-secondary">
+
+            <i class="bi bi-arrow-left"></i>
+            Back
+
+        </a>
+
+    </div>
+
+
+    <!-- =====================================================
+         FORM
+         ===================================================== -->
+
+    <div class="row">
+
+        <div class="col-lg-8 col-xl-7">
+
+            <div class="card shadow-sm">
+
+                <div class="card-body">
+
+                    <form asp-action="Create"
+                          method="post">
+
+                        @Html.AntiForgeryToken()
+
+
+                        <!-- Validation -->
+
+                        <div asp-validation-summary="ModelOnly"
+                             class="text-danger mb-3">
+                        </div>
+
+
+                        <!-- WHONET ID -->
+
+                        <div class="mb-3">
+
+                            <label asp-for="WHONETID"
+                                   class="form-label">
+                            </label>
+
+                            <input asp-for="WHONETID"
+                                   class="form-control"
+                                   placeholder="Enter WHONET ID"
+                                   autocomplete="off" />
+
+                            <span asp-validation-for="WHONETID"
+                                  class="text-danger">
+                            </span>
+
+                            <div class="form-text">
+                                Enter the WHONET identifier for the organism.
+                            </div>
+
+                        </div>
+
+
+                        <!-- ACTIONS -->
+
+                        <div class="d-flex justify-content-end gap-2">
+
+                            <a asp-action="Index"
+                               class="btn btn-secondary">
+
+                                Cancel
+
+                            </a>
+
+                            <button type="submit"
+                                    class="btn btn-primary">
+
+                                <i class="bi bi-check-lg"></i>
+                                Save Organism
+
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+@section Scripts
+{
+    @{
+        await Html.RenderPartialAsync(
+            "_ValidationScriptsPartial");
+    }
+}

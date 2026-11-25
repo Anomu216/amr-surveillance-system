@@ -1,0 +1,345 @@
+﻿@model IEnumerable<AMRSurveillance.ViewModels.OrganismViewModel>
+
+@{
+    ViewData["Title"] = "Organisms";
+}
+
+<style>
+    .badge.bg-primary {
+        cursor: pointer;
+    }
+
+        .badge.bg-primary:hover {
+            opacity: 0.85;
+        }
+</style>
+
+<div class="container-fluid">
+
+    <!-- =====================================================
+         HEADER
+         ===================================================== -->
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="mb-1">Organisms</h2>
+            <p class="text-muted mb-0">
+                Manage WHONET organism identifiers and intrinsic resistance relationships.
+            </p>
+        </div>
+
+        <div>
+            <a asp-controller="ReferenceData"
+               asp-action="Index"
+               class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>
+                <span>Back</span>
+            </a>
+
+            <a asp-action="Template"
+               class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-file-earmark-excel"></i>
+                Template
+            </a>
+
+            <a asp-action="Import"
+               class="btn btn-sm btn-outline-primary ms-1">
+                <i class="bi bi-upload"></i>
+                Import
+            </a>
+
+            <a asp-action="Create"
+               class="btn btn-sm btn-primary ms-1">
+                <i class="bi bi-plus-lg"></i>
+                Add Organism
+            </a>
+        </div>
+    </div>
+
+
+    <!-- =====================================================
+         ALERTS
+         ===================================================== -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show"
+             role="alert">
+
+            @TempData["Success"]
+
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert">
+            </button>
+
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show"
+             role="alert">
+
+            @TempData["Error"]
+
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert">
+            </button>
+
+        </div>
+    }
+
+
+    <!-- =====================================================
+         SEARCH
+         ===================================================== -->
+
+    <div class="row mb-3">
+        <div class="col-md-6">
+
+            <input type="text"
+                   id="searchInput"
+                   class="form-control"
+                   placeholder="Search WHONET ID..." />
+
+        </div>
+    </div>
+
+
+    <!-- =====================================================
+         ORGANISM TABLE
+         ===================================================== -->
+
+    <div class="table-responsive">
+
+        <table class="table table-bordered table-hover align-middle"
+               id="organismTable">
+
+            <thead class="table-light">
+
+                <tr>
+                    <th>WHONET ID</th>
+
+                    <th>
+                        Intrinsic Resistance
+                    </th>
+
+                    <th style="width: 100px;">
+                        Actions
+                    </th>
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                @foreach (var item in Model)
+                {
+                    <tr>
+
+                        <td>
+                            @item.WHONETID
+                        </td>
+                        <td>
+
+                            @if (item.IntrinsicResistanceCount > 0)
+                            {
+                                <a asp-controller="IntrinsicResistance"
+                                   asp-action="Index"
+                                   asp-route-whonetID="@item.WHONETID"
+                                   class="badge bg-primary text-decoration-none"
+                                   title="View intrinsic resistance for @item.WHONETID">
+
+                                    @item.IntrinsicResistanceCount
+
+                                </a>
+                            }
+                            else
+                            {
+                                <span class="text-muted">
+                                    0
+                                </span>
+                            }
+
+                        </td>
+
+                        <td>
+
+                            <button type="button"
+                                    class="btn btn-sm btn-outline-danger"
+                                    title="Delete"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#deleteModal"
+                                    data-whonet-id="@item.WHONETID">
+
+                                <i class="bi bi-trash"></i>
+
+                            </button>
+
+                        </td>
+
+                    </tr>
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+
+<!-- =========================================================
+     DELETE MODAL
+     ========================================================= -->
+
+<div class="modal fade"
+     id="deleteModal"
+     tabindex="-1"
+     aria-labelledby="deleteModalLabel"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-dialog-centered">
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+
+                <h5 class="modal-title"
+                    id="deleteModalLabel">
+                    Confirm Delete
+                </h5>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close">
+                </button>
+
+            </div>
+
+
+            <div class="modal-body">
+
+                <p class="mb-1">
+                    Are you sure you want to delete this organism?
+                </p>
+
+                <p class="fw-bold mb-0"
+                   id="deleteWHONETDisplay">
+                </p>
+
+                <p class="text-muted small mt-2 mb-0">
+                    Any intrinsic resistance relationships associated
+                    with this organism will also be removed.
+                </p>
+
+            </div>
+
+
+            <div class="modal-footer">
+
+                <button type="button"
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                    Cancel
+                </button>
+
+                <form asp-action="Delete"
+                      method="post"
+                      class="d-inline">
+
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden"
+                           name="whonetID"
+                           id="deleteWHONETID" />
+
+                    <button type="submit"
+                            class="btn btn-danger">
+
+                        <i class="bi bi-trash"></i>
+                        Delete
+
+                    </button>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+@section Scripts
+{
+    <script>
+
+        // =====================================================
+        // SEARCH
+        // =====================================================
+
+        document
+            .getElementById("searchInput")
+            .addEventListener("keyup", function () {
+
+                const searchValue =
+                    this.value.toLowerCase();
+
+                const rows =
+                    document.querySelectorAll(
+                        "#organismTable tbody tr"
+                    );
+
+                rows.forEach(function (row) {
+
+                    const text =
+                        row.textContent.toLowerCase();
+
+                    row.style.display =
+                        text.includes(searchValue)
+                            ? ""
+                            : "none";
+
+                });
+
+            });
+
+
+        // =====================================================
+        // DELETE MODAL
+        // =====================================================
+
+        const deleteModal =
+            document.getElementById("deleteModal");
+
+        deleteModal.addEventListener(
+            "show.bs.modal",
+            function (event) {
+
+                const button =
+                    event.relatedTarget;
+
+                const whonetID =
+                    button.getAttribute(
+                        "data-whonet-id"
+                    );
+
+                document.getElementById(
+                    "deleteWHONETID"
+                ).value = whonetID;
+
+                document.getElementById(
+                    "deleteWHONETDisplay"
+                ).textContent = whonetID;
+
+            }
+        );
+
+    </script>
+}

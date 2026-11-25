@@ -1,0 +1,94 @@
+﻿@model AMRSurveillance.Models.Facility
+
+@{
+    ViewData["Title"] = "Facility Details";
+}
+
+<div class="container mt-4">
+
+    <div class="card shadow">
+
+        <div class="card-header bg-info text-white">
+
+            <h4 class="mb-0">
+                Facility Details
+            </h4>
+
+        </div>
+
+        <div class="card-body">
+
+            <dl class="row">
+
+                <dt class="col-sm-3">
+                    Facility Code
+                </dt>
+
+                <dd class="col-sm-9">
+                    @Model.FacilityID
+                </dd>
+
+                <dt class="col-sm-3">
+                    Facility Name
+                </dt>
+
+                <dd class="col-sm-9">
+                    @Model.FacilityName
+                </dd>
+
+                <dt class="col-sm-3">
+                    County
+                </dt>
+
+                <dd class="col-sm-9">
+                    @Model.County
+                </dd>
+
+                <dt class="col-sm-3">
+                    Sub County
+                </dt>
+
+                <dd class="col-sm-9">
+                    @Model.SubCounty
+                </dd>
+
+                <dt class="col-sm-3">
+                    Facility Level
+                </dt>
+
+                <dd class="col-sm-9">
+                    @Model.FacilityLevel
+                </dd>
+
+                <dt class="col-sm-3">
+                    Ownership
+                </dt>
+
+                <dd class="col-sm-9">
+                    @Model.Ownership
+                </dd>
+
+            </dl>
+
+            <hr />
+
+            <a asp-action="Edit"
+               asp-route-id="@Model.FacilityID"
+               class="btn btn-warning">
+
+                Edit
+
+            </a>
+
+            <a asp-action="Index"
+               class="btn btn-secondary">
+
+                Back to List
+
+            </a>
+
+        </div>
+
+    </div>
+
+</div>

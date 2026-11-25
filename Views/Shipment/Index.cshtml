@@ -1,0 +1,109 @@
+﻿@model List<AMRSurveillance.ViewModels.ShipmentViewModel>
+
+@{
+    ViewData["Title"] = "Shipments";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Shipments</h2>
+
+    <div class="d-flex gap-2">
+        <a asp-action="Create" class="btn btn-primary">Add Shipment</a>
+        <a asp-action="Import" class="btn btn-success">Import Excel</a>
+        <a asp-action="Template" class="btn btn-outline-secondary">Download Template</a>
+    </div>
+</div>
+
+@if (TempData["Success"] is string success)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @success
+        <button type="button" class="btn-close" data-bs-dismiss="alert"
+                aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["Error"] is string error)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @error
+        <button type="button" class="btn-close" data-bs-dismiss="alert"
+                aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["ImportErrors"] is string importErrors)
+{
+    <div class="alert alert-warning" role="alert">
+        <h5>Import warnings</h5>
+        <pre class="mb-0 text-wrap">@importErrors</pre>
+
+        @if (TempData["ImportErrorsTruncated"] is bool truncated && truncated)
+        {
+            <p class="mt-2 mb-0">
+                Only the first 30 import warnings are shown.
+            </p>
+        }
+    </div>
+}
+
+<div class="table-responsive">
+    <table class="table table-striped table-hover align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th>KENID</th>
+                <th>Isolate ID</th>
+                <th>MALDI ID</th>
+                <th>MRSN ID</th>
+                <th>Shipment Date</th>
+                <th>Shipment Number</th>
+                <th>Box Number</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Count == 0)
+            {
+                <tr>
+                    <td colspan="8" class="text-center">
+                        No shipments have been recorded.
+                    </td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var shipment in Model)
+                {
+                    <tr>
+                        <td>@shipment.KENID</td>
+                        <td>@shipment.IsolateID</td>
+                        <td>@shipment.MALDIID</td>
+                        <td>@shipment.MRSNID</td>
+                        <td>
+                            @(shipment.ShipmentDate?.ToString("yyyy-MM-dd") ?? "—")
+                        </td>
+                        <td>@shipment.ShipmentNumber</td>
+                        <td>@shipment.BoxNumber</td>
+                        <td class="text-nowrap">
+                            <a asp-action="Details"
+                               asp-route-kenID="@shipment.KENID"
+                               class="btn btn-sm btn-outline-info">Details</a>
+
+                            <a asp-action="Edit"
+                               asp-route-kenID="@shipment.KENID"
+                               class="btn btn-sm btn-outline-primary">Edit</a>
+
+                            <a asp-action="Delete"
+                               asp-route-kenID="@shipment.KENID"
+                               class="btn btn-sm btn-outline-danger">Delete</a>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="text-muted">
+    Total shipments: @Model.Count
+</div>

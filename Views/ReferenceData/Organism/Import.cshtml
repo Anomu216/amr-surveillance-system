@@ -1,0 +1,186 @@
+﻿@{
+    ViewData["Title"] = "Import Organisms";
+}
+
+<div class="container-fluid">
+
+    <!-- =====================================================
+         HEADER
+         ===================================================== -->
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+
+        <div>
+            <h2 class="mb-1">Import Organisms</h2>
+
+            <p class="text-muted mb-0">
+                Import WHONET organism identifiers from an Excel file.
+            </p>
+        </div>
+
+        <a asp-action="Index"
+           class="btn btn-sm btn-outline-secondary">
+
+            <i class="bi bi-arrow-left"></i>
+            Back
+
+        </a>
+
+    </div>
+
+
+    <!-- =====================================================
+         ALERT
+         ===================================================== -->
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show"
+             role="alert">
+
+            @TempData["Error"]
+
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert">
+            </button>
+
+        </div>
+    }
+
+
+    <!-- =====================================================
+         UPLOAD
+         ===================================================== -->
+
+    <div class="row">
+
+        <div class="col-lg-8 col-xl-7">
+
+            <div class="card shadow-sm">
+
+                <div class="card-body">
+
+                    <h5 class="card-title">
+                        Upload Excel File
+                    </h5>
+
+                    <p class="text-muted">
+                        Select an Excel workbook containing
+                        WHONET organism identifiers.
+                    </p>
+
+
+                    <form asp-action="Import"
+                          method="post"
+                          enctype="multipart/form-data">
+
+                        @Html.AntiForgeryToken()
+
+
+                        <!-- FILE -->
+
+                        <div class="mb-3">
+
+                            <label for="file"
+                                   class="form-label">
+                                Excel File
+                            </label>
+
+                            <input type="file"
+                                   name="file"
+                                   id="file"
+                                   class="form-control"
+                                   accept=".xlsx"
+                                   required />
+
+                            <div class="form-text">
+                                Only .xlsx files are supported.
+                            </div>
+
+                        </div>
+
+
+                        <!-- ACTIONS -->
+
+                        <div class="d-flex justify-content-between align-items-center">
+
+                            <a asp-action="Template"
+                               class="btn btn-outline-secondary">
+
+                                <i class="bi bi-file-earmark-excel"></i>
+                                Download Template
+
+                            </a>
+
+                            <button type="submit"
+                                    class="btn btn-primary">
+
+                                <i class="bi bi-upload"></i>
+                                Import Organisms
+
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 REQUIREMENTS
+                 ================================================= -->
+
+            <div class="card shadow-sm mt-3">
+
+                <div class="card-body">
+
+                    <h5 class="card-title">
+                        Import Requirements
+                    </h5>
+
+                    <ul class="mb-0">
+
+                        <li>
+                            The workbook must be in
+                            <strong>.xlsx</strong> format.
+                        </li>
+
+                        <li>
+                            The first worksheet will be used.
+                        </li>
+
+                        <li>
+                            The first row must contain the
+                            column header.
+                        </li>
+
+                        <li>
+                            Data should begin from the second row.
+                        </li>
+
+                        <li>
+                            <strong>WHONETID</strong> is required.
+                        </li>
+
+                        <li>
+                            Blank rows will be skipped.
+                        </li>
+
+                        <li>
+                            Existing WHONET IDs will be skipped.
+                        </li>
+
+                    </ul>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

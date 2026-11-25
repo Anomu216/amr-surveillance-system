@@ -1,0 +1,221 @@
+﻿@model AMRSurveillance.ViewModels.AntibioticViewModel
+
+@{
+    ViewData["Title"] = "Create Antibiotic";
+}
+
+<div class="container-fluid">
+
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="mb-1">Create Antibiotic</h2>
+            <p class="text-muted mb-0">
+                Add a new antibiotic and configure its AST settings.
+            </p>
+        </div>
+
+        <a asp-action="Index"
+           class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i>
+            Back
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 col-xl-7">
+
+            <div class="card shadow-sm">
+
+                <div class="card-body">
+
+                    <form asp-action="Create"
+                          method="post">
+
+                        @Html.AntiForgeryToken()
+
+                        <div asp-validation-summary="ModelOnly"
+                             class="text-danger mb-3">
+                        </div>
+
+
+                        <!-- Antibiotic Code -->
+                        <div class="mb-3">
+                            <label asp-for="AntibioticCode"
+                                   class="form-label">
+                            </label>
+
+                            <input asp-for="AntibioticCode"
+                                   class="form-control"
+                                   placeholder="e.g. AMP"
+                                   autocomplete="off" />
+
+                            <span asp-validation-for="AntibioticCode"
+                                  class="text-danger">
+                            </span>
+
+                            <div class="form-text">
+                                This code uniquely identifies the antibiotic
+                                and cannot be changed after creation.
+                            </div>
+                        </div>
+
+
+                        <!-- Antibiotic Name -->
+                        <div class="mb-3">
+                            <label asp-for="AntibioticName"
+                                   class="form-label">
+                            </label>
+
+                            <input asp-for="AntibioticName"
+                                   class="form-control"
+                                   placeholder="e.g. Ampicillin"
+                                   autocomplete="off" />
+
+                            <span asp-validation-for="AntibioticName"
+                                  class="text-danger">
+                            </span>
+                        </div>
+
+
+                        <!-- Antibiotic Class -->
+                        <div class="mb-3">
+                            <label asp-for="AntibioticClassName"
+                                   class="form-label">
+                            </label>
+
+                            <select asp-for="AntibioticClassName"
+                                    asp-items="Model.AntibioticClasses"
+                                    class="form-select">
+
+                                <option value="">
+                                    -- Select Antibiotic Class --
+                                </option>
+
+                            </select>
+
+                            <span asp-validation-for="AntibioticClassName"
+                                  class="text-danger">
+                            </span>
+                        </div>
+
+
+                        <!-- AST Card -->
+                        <div class="mb-3">
+                            <label asp-for="ASTCard"
+                                   class="form-label">
+                            </label>
+
+                            <input asp-for="ASTCard"
+                                   class="form-control"
+                                   placeholder="e.g. GN83;N808"
+                                   autocomplete="off" />
+
+                            <span asp-validation-for="ASTCard"
+                                  class="text-danger">
+                            </span>
+
+                            <div class="form-text">
+                                Enter one or more AST card identifiers,
+                                separated by semicolons.
+                            </div>
+                        </div>
+
+
+                        <!-- AST Configuration -->
+                        <div class="card bg-light border mb-3">
+
+                            <div class="card-body">
+
+                                <h6 class="card-title mb-3">
+                                    AST Configuration
+                                </h6>
+
+                                <!-- MIC -->
+                                <div class="form-check mb-2">
+
+                                    <input asp-for="MICEnabled"
+                                           class="form-check-input" />
+
+                                    <label asp-for="MICEnabled"
+                                           class="form-check-label">
+                                    </label>
+
+                                </div>
+
+                                <!-- Interpretation -->
+                                <div class="form-check mb-2">
+
+                                    <input asp-for="InterpretationEnabled"
+                                           class="form-check-input" />
+
+                                    <label asp-for="InterpretationEnabled"
+                                           class="form-check-label">
+                                    </label>
+
+                                </div>
+
+                                <!-- Active -->
+                                <div class="form-check mb-2">
+
+                                    <input asp-for="Active"
+                                           class="form-check-input" />
+
+                                    <label asp-for="Active"
+                                           class="form-check-label">
+                                    </label>
+
+                                </div>
+
+                                <!-- Include in Monthly Report -->
+                                <div class="form-check">
+
+                                    <input asp-for="IncludeInMonthlyReport"
+                                           class="form-check-input" />
+
+                                    <label asp-for="IncludeInMonthlyReport"
+                                           class="form-check-label">
+                                    </label>
+
+                                    <div class="form-text">
+                                        Automatically tracks resistance rates and rolling spikes for this agent in Monthly Surveillance Reports.
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- Buttons -->
+                        <div class="d-flex justify-content-end gap-2">
+
+                            <a asp-action="Index"
+                               class="btn btn-secondary">
+                                Cancel
+                            </a>
+
+                            <button type="submit"
+                                    class="btn btn-primary">
+                                <i class="bi bi-check-lg"></i>
+                                Create Antibiotic
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+@section Scripts
+{
+    <partial name="_ValidationScriptsPartial" />
+}

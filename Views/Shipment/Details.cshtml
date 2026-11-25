@@ -1,0 +1,51 @@
+﻿@model AMRSurveillance.ViewModels.ShipmentViewModel
+
+@{
+    ViewData["Title"] = "Shipment Details";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Shipment Details</h2>
+
+    <div>
+        <a asp-action="Edit"
+           asp-route-kenID="@Model.KENID"
+           class="btn btn-primary">Edit Shipment</a>
+
+        <a asp-action="Index"
+           class="btn btn-outline-secondary">Back to Shipments</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <strong>Shipment: @Model.KENID</strong>
+    </div>
+
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-4">KENID</dt>
+            <dd class="col-sm-8">@Model.KENID</dd>
+
+            <dt class="col-sm-4">Isolate ID</dt>
+            <dd class="col-sm-8">@Model.IsolateID</dd>
+
+            <dt class="col-sm-4">MALDI ID</dt>
+            <dd class="col-sm-8">@(Model.MALDIID ?? "—")</dd>
+
+            <dt class="col-sm-4">MRSN ID</dt>
+            <dd class="col-sm-8">@(Model.MRSNID ?? "Not yet assigned")</dd>
+
+            <dt class="col-sm-4">Shipment Date</dt>
+            <dd class="col-sm-8">
+                @(Model.ShipmentDate?.ToString("yyyy-MM-dd") ?? "—")
+            </dd>
+
+            <dt class="col-sm-4">Shipment Number</dt>
+            <dd class="col-sm-8">@(Model.ShipmentNumber ?? "—")</dd>
+
+            <dt class="col-sm-4">Box Number</dt>
+            <dd class="col-sm-8">@(Model.BoxNumber ?? "—")</dd>
+        </dl>
+    </div>
+</div>

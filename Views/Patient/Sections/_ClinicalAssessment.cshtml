@@ -1,0 +1,354 @@
+﻿@model AMRSurveillance.ViewModels.PatientViewModel
+
+<div class="card section-card">
+
+    <div class="card-header d-flex align-items-center">
+
+        <i class="bi bi-heart-pulse-fill text-primary me-2 fs-4"></i>
+
+        <div>
+
+            <h5 class="mb-0">
+                Clinical Assessment
+            </h5>
+
+            <small class="text-muted">
+                Record the patient's clinical assessment and vital signs.
+            </small>
+
+        </div>
+
+    </div>
+
+    <div class="card-body">
+
+        <!-- ========================================= -->
+        <!-- Clinical Assessment -->
+        <!-- ========================================= -->
+
+        <h6 class="text-primary border-bottom pb-2 mb-4">
+            Clinical Assessment
+        </h6>
+
+        <div class="row g-4">
+
+            <!-- Sedated -->
+
+            <div class="col-md-6">
+
+                <label asp-for="Sedated"
+                       class="form-label fw-semibold">
+
+                    Sedated
+
+                </label>
+
+                <select asp-for="Sedated"
+                        asp-items="Model.YesNoList"
+                        class="form-select">
+                </select>
+
+                <div class="invalid-feedback"></div>
+
+                <span asp-validation-for="Sedated"
+                      class="text-danger small"></span>
+
+            </div>
+
+
+            <!-- Invasive Device -->
+
+            <div class="col-md-6">
+
+                <label asp-for="InvasiveDevice"
+                       class="form-label fw-semibold">
+
+                    Invasive Device
+
+                </label>
+
+                <select asp-for="InvasiveDevice"
+                        asp-items="Model.YesNoList"
+                        class="form-select">
+                </select>
+
+                <div class="invalid-feedback"></div>
+
+                <span asp-validation-for="InvasiveDevice"
+                      class="text-danger small"></span>
+
+            </div>
+
+
+            <!-- Infection Present At Admission -->
+            <!-- Displayed for inpatients only by patient-questionnaire.js -->
+
+            <div class="col-md-6"
+                 id="infectionPresentAtAdmissionContainer">
+
+                <label asp-for="InfectionPresentAtAdmission"
+                       class="form-label fw-semibold">
+
+                    Infection Present at Admission
+
+                </label>
+
+                <select asp-for="InfectionPresentAtAdmission"
+                        asp-items="Model.YesNoList"
+                        class="form-select"
+                        id="InfectionPresentAtAdmission">
+                </select>
+
+                <div class="invalid-feedback"></div>
+
+                <span asp-validation-for="InfectionPresentAtAdmission"
+                      class="text-danger small"></span>
+
+            </div>
+
+
+            <!-- Infection Onset -->
+
+            <div class="col-md-6">
+
+                <label asp-for="InfectionOnset"
+                       class="form-label fw-semibold">
+
+                    Infection Onset Date
+
+                </label>
+
+                <input asp-for="InfectionOnset"
+                       class="form-control"
+                       type="date"
+                       id="InfectionOnset"
+                       max="@DateTime.Today.ToString("yyyy-MM-dd")"
+                       autocomplete="off" />
+
+                <div class="invalid-feedback"></div>
+
+                <span asp-validation-for="InfectionOnset"
+                      class="text-danger small"></span>
+
+            </div>
+
+        </div>
+
+
+        <!-- ========================================= -->
+        <!-- Vital Signs -->
+        <!-- Hidden automatically for ISO cases by patient-questionnaire.js -->
+        <!-- ========================================= -->
+
+        <div id="vitalSignsSection">
+
+            <h6 class="text-primary border-bottom pb-2 mt-5 mb-4">
+                Vital Signs
+            </h6>
+
+            <div class="row g-4">
+
+                <!-- Weight -->
+
+                <div class="col-md-4">
+
+                    <label asp-for="WeightKg"
+                           class="form-label fw-semibold">
+
+                        Weight (kg)
+
+                    </label>
+
+                    <input asp-for="WeightKg"
+                           class="form-control"
+                           type="number"
+                           min="0"
+                           max="300"
+                           step="0.1"
+                           autocomplete="off" />
+
+                    <div class="invalid-feedback"></div>
+
+                    <span asp-validation-for="WeightKg"
+                          class="text-danger small"></span>
+
+                </div>
+
+
+                <!-- Temperature -->
+
+                <div class="col-md-4">
+
+                    <label asp-for="TemperatureC"
+                           class="form-label fw-semibold">
+
+                        Temperature (°C)
+
+                    </label>
+
+                    <input asp-for="TemperatureC"
+                           class="form-control"
+                           type="number"
+                           min="30"
+                           max="45"
+                           step="0.1"
+                           autocomplete="off" />
+
+                    <div class="invalid-feedback"></div>
+
+                    <span asp-validation-for="TemperatureC"
+                          class="text-danger small"></span>
+
+                </div>
+
+
+                <!-- Oxygen Saturation -->
+
+                <div class="col-md-4">
+
+                    <label asp-for="OxygenSaturation"
+                           class="form-label fw-semibold">
+
+                        Oxygen Saturation (%)
+
+                    </label>
+
+                    <input asp-for="OxygenSaturation"
+                           class="form-control"
+                           type="number"
+                           step="0.1"
+                           min="0"
+                           max="100"
+                           autocomplete="off" />
+
+                    <div class="invalid-feedback"></div>
+
+                    <span asp-validation-for="OxygenSaturation"
+                          class="text-danger small"></span>
+
+                </div>
+
+
+                <!-- BP Systolic -->
+
+                <div class="col-md-4">
+
+                    <label asp-for="BPSystolic"
+                           class="form-label fw-semibold">
+
+                        BP Systolic (mmHg)
+
+                    </label>
+
+                    <input asp-for="BPSystolic"
+                           class="form-control"
+                           type="number"
+                           min="0"
+                           max="300"
+                           step="1"
+                           autocomplete="off" />
+
+                    <div class="invalid-feedback"></div>
+
+                    <span asp-validation-for="BPSystolic"
+                          class="text-danger small"></span>
+
+                </div>
+
+
+                <!-- BP Diastolic -->
+
+                <div class="col-md-4">
+
+                    <label asp-for="BPDiastolic"
+                           class="form-label fw-semibold">
+
+                        BP Diastolic (mmHg)
+
+                    </label>
+
+                    <input asp-for="BPDiastolic"
+                           class="form-control"
+                           type="number"
+                           min="0"
+                           max="200"
+                           step="1"
+                           autocomplete="off" />
+
+                    <div class="invalid-feedback"></div>
+
+                    <span asp-validation-for="BPDiastolic"
+                          class="text-danger small"></span>
+
+                </div>
+
+
+                <!-- Pulse -->
+
+                <div class="col-md-4">
+
+                    <label asp-for="Pulse"
+                           class="form-label fw-semibold">
+
+                        Pulse (beats/min)
+
+                    </label>
+
+                    <input asp-for="Pulse"
+                           class="form-control"
+                           type="number"
+                           min="0"
+                           max="300"
+                           step="1"
+                           autocomplete="off" />
+
+                    <div class="invalid-feedback"></div>
+
+                    <span asp-validation-for="Pulse"
+                          class="text-danger small"></span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+    (function () {
+        const section = document.getElementById("vitalSignsSection");
+        if (!section) return;
+
+        const fieldIds = [
+            "WeightKg",
+            "TemperatureC",
+            "OxygenSaturation",
+            "BPSystolic",
+            "BPDiastolic",
+            "Pulse"
+        ];
+
+        const containers = fieldIds
+            .map(id => document.getElementById(id)?.closest(".col-md-4"))
+            .filter(Boolean);
+
+        if (!containers.length) return;
+
+        function syncVitalSignsVisibility() {
+            const allHidden = containers.every(
+                c => c.classList.contains("d-none") || c.style.display === "none"
+            );
+            section.classList.toggle("d-none", allHidden);
+        }
+
+        const observer = new MutationObserver(syncVitalSignsVisibility);
+        containers.forEach(c => {
+            observer.observe(c, { attributes: true, attributeFilter: ["class", "style"] });
+        });
+
+        syncVitalSignsVisibility();
+    })();
+</script>

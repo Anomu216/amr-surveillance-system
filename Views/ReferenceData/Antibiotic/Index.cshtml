@@ -1,0 +1,368 @@
+﻿@model IEnumerable<AMRSurveillance.ViewModels.AntibioticViewModel>
+
+@{
+    ViewData["Title"] = "Antibiotics";
+}
+
+<style>
+    .reference-page {
+        min-width: 0;
+        overflow-x: clip;
+    }
+
+    .antibiotic-header-actions {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        flex-shrink: 0;
+    }
+
+        .antibiotic-header-actions .btn {
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+    .reference-table .antibiotic-code-column {
+        white-space: nowrap;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .reference-table .antibiotic-name-column,
+    .reference-table .antibiotic-class-column,
+    .reference-table .ast-card-column {
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        min-width: 110px;
+    }
+
+    .reference-table .status-column {
+        white-space: nowrap;
+        text-align: center;
+    }
+
+    .reference-table thead th.status-column {
+        text-align: center;
+    }
+
+    .reference-table .actions-column {
+        width: 100px;
+        min-width: 100px;
+        white-space: nowrap;
+    }
+
+    @@media (max-width: 575.98px) {
+        .antibiotic-header-actions {
+            width: 100%;
+        }
+
+            .antibiotic-header-actions .btn {
+                flex: 1 1 auto;
+                justify-content: center;
+            }
+    }
+</style>
+
+<div class="container-fluid reference-page py-2">
+
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-start align-items-md-center mb-3 flex-wrap gap-3">
+        <div class="min-w-0">
+            <h2 class="mb-1 text-break">Antibiotics</h2>
+            <p class="text-muted mb-0">
+                Manage antibiotics and their AST configuration.
+            </p>
+        </div>
+
+        <div class="antibiotic-header-actions">
+            <a asp-controller="ReferenceData"
+               asp-action="Index"
+               class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>
+                <span>Back</span>
+            </a>
+
+            <a asp-action="Template"
+               class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-file-earmark-excel me-1"></i>
+                <span>Template</span>
+            </a>
+
+            <a asp-action="Import"
+               class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-upload me-1"></i>
+                <span>Import</span>
+            </a>
+
+            <a asp-action="Create"
+               class="btn btn-sm btn-primary">
+                <i class="bi bi-plus-lg me-1"></i>
+                <span>New Antibiotic</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Success Message -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show"
+             role="alert">
+            @TempData["Success"]
+
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Close">
+            </button>
+        </div>
+    }
+
+    <!-- Error Message -->
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show"
+             role="alert">
+            @TempData["Error"]
+
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Close">
+            </button>
+        </div>
+    }
+
+    <!-- Search -->
+    <div class="row g-2 mb-3">
+        <div class="col-12 col-sm-8 col-md-6 col-lg-5">
+            <input type="text"
+                   id="searchInput"
+                   class="form-control form-control-sm"
+                   placeholder="Search antibiotics by code, name, class, or AST card..."
+                   aria-label="Search antibiotics" />
+        </div>
+    </div>
+
+    <!-- Antibiotic Table -->
+    <div class="reference-table-wrapper">
+        <table class="table table-hover align-middle reference-table"
+               id="antibioticTable">
+
+            <thead>
+                <tr>
+                    <th class="antibiotic-code-column">Code</th>
+                    <th class="antibiotic-name-column">Antibiotic</th>
+                    <th class="antibiotic-class-column">Class</th>
+                    <th class="ast-card-column">AST Card</th>
+                    <th class="status-column">MIC</th>
+                    <th class="status-column">Interpretation</th>
+                    <th class="status-column">Monthly Report</th>
+                    <th class="status-column">Active</th>
+                    <th class="actions-column">Actions</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr class="antibiotic-data-row">
+                        <td class="antibiotic-code-column">
+                            <strong>@item.AntibioticCode</strong>
+                        </td>
+
+                        <td class="antibiotic-name-column">
+                            @item.AntibioticName
+                        </td>
+
+                        <td class="antibiotic-class-column">
+                            @item.AntibioticClassName
+                        </td>
+
+                        <td class="ast-card-column">
+                            @item.ASTCard
+                        </td>
+
+                        <td class="status-column">
+                            @if (item.MICEnabled)
+                            {
+                                <span class="badge bg-success">Yes</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">No</span>
+                            }
+                        </td>
+
+                        <td class="status-column">
+                            @if (item.InterpretationEnabled)
+                            {
+                                <span class="badge bg-success">Yes</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">No</span>
+                            }
+                        </td>
+
+                        <td class="status-column">
+                            @if (item.IncludeInMonthlyReport)
+                            {
+                                <span class="badge bg-primary">Included</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted small">—</span>
+                            }
+                        </td>
+
+                        <td class="status-column">
+                            @if (item.Active)
+                            {
+                                <span class="badge bg-success">Active</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Inactive</span>
+                            }
+                        </td>
+
+                        <td class="actions-column">
+                            <div class="reference-actions">
+                                <a asp-action="Edit"
+                                   asp-route-id="@item.AntibioticCode"
+                                   class="btn btn-sm btn-outline-primary"
+                                   title="Edit"
+                                   aria-label="Edit @item.AntibioticName">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-danger"
+                                        title="Delete"
+                                        aria-label="Delete @item.AntibioticName"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#deleteModal"
+                                        data-antibiotic-code="@item.AntibioticCode"
+                                        data-antibiotic-name="@item.AntibioticName">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+
+                <tr id="noSearchResultsRow" class="d-none">
+                    <td colspan="9" class="text-center text-muted py-4">
+                        No matching antibiotics found.
+                    </td>
+                </tr>
+            </tbody>
+
+        </table>
+    </div>
+
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade"
+     id="deleteModal"
+     tabindex="-1"
+     aria-labelledby="deleteModalLabel"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">
+                    Confirm Delete
+                </h5>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close">
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <p class="mb-1">
+                    Are you sure you want to delete:
+                </p>
+
+                <p class="fw-bold mb-0 text-break"
+                   id="deleteAntibioticName">
+                </p>
+
+                <p class="text-muted small mt-2 mb-0">
+                    This action cannot be undone.
+                </p>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button"
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                    Cancel
+                </button>
+
+                <form asp-action="Delete"
+                      method="post"
+                      class="d-inline">
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden"
+                           name="id"
+                           id="deleteAntibioticCode" />
+
+                    <button type="submit"
+                            class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i>
+                        <span>Delete</span>
+                    </button>
+                </form>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts
+{
+    <script>
+        document.getElementById("searchInput")
+            ?.addEventListener("input", function () {
+                const searchValue = this.value.trim().toLowerCase();
+                const rows = document.querySelectorAll("#antibioticTable tbody tr.antibiotic-data-row");
+                const emptyRow = document.getElementById("noSearchResultsRow");
+                let visibleCount = 0;
+
+                rows.forEach(function (row) {
+                    const text = row.textContent.toLowerCase();
+                    const matches = text.includes(searchValue);
+                    row.style.display = matches ? "" : "none";
+                    if (matches) {
+                        visibleCount++;
+                    }
+                });
+
+                if (emptyRow) {
+                    emptyRow.classList.toggle("d-none", visibleCount > 0 || rows.length === 0);
+                }
+            });
+
+        const deleteModal = document.getElementById("deleteModal");
+
+        deleteModal?.addEventListener("show.bs.modal", function (event) {
+            const button = event.relatedTarget;
+            if (!button) return;
+
+            const antibioticCode = button.getAttribute("data-antibiotic-code") || "";
+            const antibioticName = button.getAttribute("data-antibiotic-name") || "";
+
+            document.getElementById("deleteAntibioticCode").value = antibioticCode;
+            document.getElementById("deleteAntibioticName").textContent =
+                antibioticCode + (antibioticName ? " — " + antibioticName : "");
+        });
+    </script>
+}

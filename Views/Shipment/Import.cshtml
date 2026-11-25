@@ -1,0 +1,77 @@
+﻿@{
+    ViewData["Title"] = "Import Shipments";
+}
+
+<h2 class="mb-4">Import Shipments from Excel</h2>
+
+@if (TempData["Error"] is string error)
+{
+    <div class="alert alert-danger" role="alert">
+        @error
+    </div>
+}
+
+<div class="card mb-4">
+    <div class="card-header">
+        <strong>Instructions</strong>
+    </div>
+
+    <div class="card-body">
+        <ol>
+            <li>
+                Download the
+                <a asp-action="Template">Shipment Excel template</a>.
+            </li>
+            <li>Enter shipment records using the provided column headers.</li>
+            <li>
+                Ensure every <strong>KENID</strong> is unique and every
+                <strong>IsolateID</strong> exists in the Worksheets table.
+            </li>
+            <li>
+                Each nonblank <strong>MRSNID</strong> must be unique.
+                It may be left blank and added later by editing the shipment.
+            </li>
+            <li>Save the workbook as an Excel <code>.xlsx</code> file.</li>
+            <li>Upload the completed workbook below.</li>
+        </ol>
+
+        <p class="mb-0">
+            Existing KENID values and rows with validation errors will be
+            skipped rather than used to overwrite existing shipments.
+        </p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <strong>Select Excel File</strong>
+    </div>
+
+    <div class="card-body">
+        <form asp-action="Import"
+              method="post"
+              enctype="multipart/form-data">
+
+            @Html.AntiForgeryToken()
+
+            <div class="mb-3">
+                <label for="file" class="form-label">Excel workbook (.xlsx)</label>
+                <input type="file"
+                       id="file"
+                       name="file"
+                       class="form-control"
+                       accept=".xlsx"
+                       required />
+            </div>
+
+            <button type="submit" class="btn btn-success">
+                Import Shipments
+            </button>
+
+            <a asp-action="Index"
+               class="btn btn-outline-secondary ms-2">
+                Cancel
+            </a>
+        </form>
+    </div>
+</div>
